@@ -127,7 +127,7 @@ export function ConversionFlow() {
       </div>
 
       {/* Step Content */}
-      <Card className="border border-gray-200 shadow-sm">
+      <Card className="border border-gray-200 shadow-sm bg-white">
         <CardContent className="p-8">
           {/* Step 1: Input */}
           {currentStep === "input" && (
