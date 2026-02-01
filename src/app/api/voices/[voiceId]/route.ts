@@ -16,31 +16,17 @@ export async function GET(
   }
 
   try {
-    // Try to fetch from ElevenLabs public API (no auth needed for public voices)
-    const response = await fetch(`${ELEVENLABS_API_URL}/voices/${voiceId}`, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    // First try with API key if available
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (apiKey) {
+      const authResponse = await fetch(`${ELEVENLABS_API_URL}/voices/${voiceId}`, {
+        headers: {
+          'xi-api-key': apiKey,
+          'Accept': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      // If not found publicly, try with API key if available
-      const apiKey = process.env.ELEVENLABS_API_KEY;
-      if (apiKey) {
-        const authResponse = await fetch(`${ELEVENLABS_API_URL}/voices/${voiceId}`, {
-          headers: {
-            'xi-api-key': apiKey,
-            'Accept': 'application/json',
-          },
-        });
-
-        if (!authResponse.ok) {
-          return NextResponse.json(
-            { error: 'Voice not found' },
-            { status: 404 }
-          );
-        }
-
+      if (authResponse.ok) {
         const voice = await authResponse.json();
         return NextResponse.json({
           success: true,
@@ -52,14 +38,31 @@ export async function GET(
           },
         });
       }
+    }
 
+    // Fallback: Search in the public voices list
+    const listResponse = await fetch(`${ELEVENLABS_API_URL}/voices`, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!listResponse.ok) {
       return NextResponse.json(
-        { error: 'Voice not found. Make sure the voice ID is correct and the voice is publicly shared.' },
-        { status: 404 }
+        { error: 'Failed to fetch voices' },
+        { status: 500 }
       );
     }
 
-    const voice = await response.json();
+    const data = await listResponse.json();
+    const voice = data.voices?.find((v: { voice_id: string }) => v.voice_id === voiceId);
+
+    if (!voice) {
+      return NextResponse.json(
+        { error: 'Voice not found. Make sure the voice ID is correct. Note: Private/cloned voices require an API key.' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
