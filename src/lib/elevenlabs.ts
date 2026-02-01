@@ -44,7 +44,25 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch voices: ${response.status} ${response.statusText}`);
+    // If API key doesn't have permission, fall back to public API
+    const publicResponse = await fetch(`${ELEVENLABS_API_URL}/voices`);
+    if (!publicResponse.ok) {
+      throw new Error(`Failed to fetch voices: ${response.status} ${response.statusText}`);
+    }
+    const publicData = await publicResponse.json();
+    const publicVoices: ElevenLabsVoice[] = publicData.voices || [];
+    return publicVoices
+      .filter(v => v.category === 'premade')
+      .slice(0, 12)
+      .map(v => ({
+        id: v.voice_id,
+        name: v.name,
+        description: v.labels?.description || `${v.labels?.gender || ''} ${v.labels?.accent || ''} voice`.trim(),
+        previewUrl: v.preview_url,
+        category: v.category,
+        accent: v.labels?.accent,
+        gender: v.labels?.gender,
+      }));
   }
 
   const data = await response.json();
@@ -58,11 +76,11 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
     .map(v => ({
       id: v.voice_id,
       name: v.name,
-      description: v.labels.description || `${v.labels.gender || ''} ${v.labels.accent || ''} voice`.trim(),
+      description: v.labels?.description || `${v.labels?.gender || ''} ${v.labels?.accent || ''} voice`.trim(),
       previewUrl: v.preview_url,
       category: v.category,
-      accent: v.labels.accent,
-      gender: v.labels.gender,
+      accent: v.labels?.accent,
+      gender: v.labels?.gender,
     }));
 
   return premadeVoices;
