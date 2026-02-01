@@ -553,7 +553,7 @@ export function ConversionFlow() {
                               }
                             }}
                             className={`
-                              flex-1 rounded-md transition-all
+                              flex-1 rounded-md transition-all py-2
                               ${activeVoice ? "cursor-pointer hover:opacity-80" : ""}
                             `}
                             style={{ 
@@ -584,7 +584,8 @@ export function ConversionFlow() {
                               }}
                               onClick={(e) => e.stopPropagation()}
                               rows={1}
-                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none leading-snug px-3 py-1 text-gray-700 overflow-hidden min-h-0"
+                              style={{ lineHeight: '1.4' }}
+                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none px-3 py-0 text-gray-700 overflow-hidden block"
                             />
                           </div>
                         </div>
