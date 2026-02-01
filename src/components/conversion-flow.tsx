@@ -531,7 +531,7 @@ export function ConversionFlow() {
                   <div>
                     <span className="text-gray-500">Generation cost: </span>
                     <span className="font-medium text-gray-900">
-                      ${(textSegments.reduce((acc, s) => acc + s.text.length, 0) * 0.0001).toFixed(2)}
+                      ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -592,7 +592,7 @@ export function ConversionFlow() {
                       <div className="mb-6 p-4 bg-gray-50 rounded-lg inline-block">
                         <div className="text-sm text-gray-500 mb-1">Total cost</div>
                         <div className="text-2xl font-semibold text-gray-900">
-                          ${(textSegments.reduce((acc, s) => acc + s.text.length, 0) * 0.0001).toFixed(2)}
+                          ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                         </div>
                       </div>
                       <div>
@@ -663,7 +663,7 @@ export function ConversionFlow() {
                           <div className="flex justify-between text-sm mb-4">
                             <span className="text-gray-500">Total</span>
                             <span className="font-semibold text-gray-900">
-                              ${(textSegments.reduce((acc, s) => acc + s.text.length, 0) * 0.0001).toFixed(2)}
+                              ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                             </span>
                           </div>
                           
@@ -683,7 +683,7 @@ export function ConversionFlow() {
                             ) : (
                               <>
                                 <Lock className="w-4 h-4 mr-2" />
-                                Pay ${(textSegments.reduce((acc, s) => acc + s.text.length, 0) * 0.0001).toFixed(2)}
+                                Pay ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                               </>
                             )}
                           </Button>
