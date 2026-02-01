@@ -588,7 +588,7 @@ export function ConversionFlow() {
                                 }
                               }}
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none leading-relaxed px-3 py-2 text-gray-700 overflow-hidden"
+                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none leading-normal px-3 py-1.5 text-gray-700 overflow-hidden"
                             />
                           </div>
                         </div>
