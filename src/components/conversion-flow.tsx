@@ -533,6 +533,9 @@ export function ConversionFlow() {
                     <span className="font-medium text-gray-900">
                       ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                     </span>
+                    <span className="text-gray-400 text-xs ml-1">
+                      ($0.75/min)
+                    </span>
                   </div>
                 </div>
                 <div className="text-xs text-gray-400">
