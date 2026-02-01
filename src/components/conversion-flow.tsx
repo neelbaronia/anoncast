@@ -346,44 +346,48 @@ export function ConversionFlow() {
                             <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
                             <span className="block text-xs text-gray-500">{voice.description}</span>
                           </div>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between">
+                          <button 
+                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                            onClick={(e) => { e.stopPropagation(); }}
+                          >
+                            <Volume2 className="w-3 h-3" />
+                            Preview
+                          </button>
                           {/* Apply all toggle */}
-                          <button
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (allAssigned) {
-                                // Turn off - clear all voices
                                 setTextSegments(segments =>
                                   segments.map(s => ({ ...s, voiceId: "", confirmed: false }))
                                 );
                               } else {
-                                // Turn on - assign this voice to all
                                 setTextSegments(segments =>
                                   segments.map(s => ({ ...s, voiceId: voice.id, confirmed: true }))
                                 );
                                 setActiveVoice(voice.id);
                               }
                             }}
-                            className="relative w-10 h-5 rounded-full transition-colors"
-                            style={{ 
-                              backgroundColor: allAssigned ? voice.color : '#e5e7eb'
-                            }}
-                            title={allAssigned ? "Remove from all" : "Apply to all paragraphs"}
                           >
-                            <div 
-                              className={`
-                                absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all
-                                ${allAssigned ? 'left-5' : 'left-0.5'}
-                              `}
-                            />
-                          </button>
+                            <span className="text-xs text-gray-500">For all text</span>
+                            <div
+                              className="relative w-8 h-4 rounded-full transition-colors"
+                              style={{ 
+                                backgroundColor: allAssigned ? voice.color : '#e5e7eb'
+                              }}
+                            >
+                              <div 
+                                className={`
+                                  absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all
+                                  ${allAssigned ? 'left-4' : 'left-0.5'}
+                                `}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <button 
-                          className="mt-2 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-                          onClick={(e) => { e.stopPropagation(); }}
-                        >
-                          <Volume2 className="w-3 h-3" />
-                          Preview
-                        </button>
                       </div>
                     );
                   })}
