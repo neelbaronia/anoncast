@@ -320,11 +320,10 @@ export function ConversionFlow() {
                 <div className="w-48 flex-shrink-0 space-y-3">
                   <h3 className="text-sm font-medium text-gray-900 mb-3">Voices</h3>
                   {voiceOptions.map((voice) => (
-                    <button
+                    <div
                       key={voice.id}
-                      onClick={() => setActiveVoice(voice.id)}
                       className={`
-                        w-full p-3 rounded-lg border-2 text-left transition-all
+                        w-full p-3 rounded-lg border-2 text-left transition-all cursor-pointer
                         ${activeVoice === voice.id
                           ? "border-current shadow-sm"
                           : "border-transparent hover:border-gray-200"
@@ -334,16 +333,31 @@ export function ConversionFlow() {
                         backgroundColor: voice.bgColor,
                         borderColor: activeVoice === voice.id ? voice.color : undefined
                       }}
+                      onClick={() => setActiveVoice(voice.id)}
                     >
                       <div className="flex items-center gap-2">
                         <div 
                           className="w-3 h-3 rounded-full flex-shrink-0"
                           style={{ backgroundColor: voice.color }}
                         />
-                        <div>
+                        <div className="flex-1">
                           <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
                           <span className="block text-xs text-gray-500">{voice.description}</span>
                         </div>
+                        {/* Apply all toggle */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTextSegments(segments =>
+                              segments.map(s => ({ ...s, voiceId: voice.id, confirmed: true }))
+                            );
+                            setActiveVoice(voice.id);
+                          }}
+                          className="text-xs px-2 py-1 rounded bg-white/60 hover:bg-white text-gray-600 hover:text-gray-900 transition-colors"
+                          title="Apply to all paragraphs"
+                        >
+                          All
+                        </button>
                       </div>
                       <button 
                         className="mt-2 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
@@ -352,7 +366,7 @@ export function ConversionFlow() {
                         <Volume2 className="w-3 h-3" />
                         Preview
                       </button>
-                    </button>
+                    </div>
                   ))}
                 </div>
 
