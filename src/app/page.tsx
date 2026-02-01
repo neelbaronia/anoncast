@@ -123,11 +123,6 @@ export default function Home() {
             <div className="font-semibold text-lg">
               anoncast
             </div>
-            <nav className="flex items-center gap-8">
-              <button className="text-sm font-medium px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors">
-                Sign in
-              </button>
-            </nav>
           </div>
         </header>
 
