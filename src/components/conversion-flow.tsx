@@ -526,7 +526,16 @@ export function ConversionFlow() {
                   
                   {/* Custom voice input */}
                   <div className="pt-3 border-t border-gray-200 mt-3">
-                    <p className="text-xs text-gray-500 mb-2">Or use your own voice:</p>
+                    <p className="text-xs text-gray-500 mb-2">
+                      <a 
+                        href="https://elevenlabs.io/voice-library" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Use another ElevenLabs voice
+                      </a>
+                    </p>
                     <div className="flex gap-2">
                       <Input
                         type="text"
