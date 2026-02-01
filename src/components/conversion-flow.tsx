@@ -446,16 +446,20 @@ export function ConversionFlow() {
                             }}
                           >
                             <textarea
-                              value={segment.text}
-                              onChange={(e) => {
+                              defaultValue={segment.text}
+                              onBlur={(e) => {
+                                // Sync state on blur to preserve browser undo
                                 setTextSegments(segments =>
                                   segments.map(s =>
                                     s.id === segment.id ? { ...s, text: e.target.value } : s
                                   )
                                 );
-                                // Auto-resize
-                                e.target.style.height = "auto";
-                                e.target.style.height = e.target.scrollHeight + "px";
+                              }}
+                              onInput={(e) => {
+                                // Auto-resize on input
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.height = "auto";
+                                target.style.height = target.scrollHeight + "px";
                               }}
                               onFocus={(e) => {
                                 e.target.style.height = "auto";
