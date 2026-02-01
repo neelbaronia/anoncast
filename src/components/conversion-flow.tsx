@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,8 @@ import {
   Check,
   CreditCard,
   Lock,
-  X
+  X,
+  Square
 } from "lucide-react";
 
 type Step = "input" | "review" | "generate" | "publish";
@@ -29,15 +30,25 @@ interface VoiceOption {
   id: string;
   name: string;
   description: string;
+  previewUrl: string;
   color: string;
   bgColor: string;
 }
 
-const voiceOptions: VoiceOption[] = [
-  { id: "alex", name: "Alex", description: "Warm, conversational", color: "#ef4444", bgColor: "#fef2f2" },
-  { id: "sarah", name: "Sarah", description: "Professional, clear", color: "#3b82f6", bgColor: "#eff6ff" },
-  { id: "marcus", name: "Marcus", description: "Deep, authoritative", color: "#22c55e", bgColor: "#f0fdf4" },
-  { id: "emma", name: "Emma", description: "Friendly, engaging", color: "#f59e0b", bgColor: "#fffbeb" },
+// Color palette for voices
+const voiceColors = [
+  { color: "#ef4444", bgColor: "#fef2f2" }, // red
+  { color: "#3b82f6", bgColor: "#eff6ff" }, // blue
+  { color: "#22c55e", bgColor: "#f0fdf4" }, // green
+  { color: "#f59e0b", bgColor: "#fffbeb" }, // amber
+  { color: "#8b5cf6", bgColor: "#f5f3ff" }, // violet
+  { color: "#ec4899", bgColor: "#fdf2f8" }, // pink
+  { color: "#06b6d4", bgColor: "#ecfeff" }, // cyan
+  { color: "#f97316", bgColor: "#fff7ed" }, // orange
+  { color: "#14b8a6", bgColor: "#f0fdfa" }, // teal
+  { color: "#6366f1", bgColor: "#eef2ff" }, // indigo
+  { color: "#84cc16", bgColor: "#f7fee7" }, // lime
+  { color: "#a855f7", bgColor: "#faf5ff" }, // purple
 ];
 
 interface TextSegment {
@@ -80,6 +91,56 @@ export function ConversionFlow() {
   const [showPayment, setShowPayment] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [scrapeError, setScrapeError] = useState<string | null>(null);
+  const [voiceOptions, setVoiceOptions] = useState<VoiceOption[]>([]);
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Fetch voices from ElevenLabs
+  useEffect(() => {
+    async function loadVoices() {
+      setVoicesLoading(true);
+      try {
+        const response = await fetch('/api/voices');
+        const data = await response.json();
+        
+        if (data.success && data.voices) {
+          // Assign colors to voices
+          const voicesWithColors: VoiceOption[] = data.voices.map((v: { id: string; name: string; description: string; previewUrl: string }, i: number) => ({
+            ...v,
+            color: voiceColors[i % voiceColors.length].color,
+            bgColor: voiceColors[i % voiceColors.length].bgColor,
+          }));
+          setVoiceOptions(voicesWithColors);
+        }
+      } catch (error) {
+        console.error('Failed to load voices:', error);
+      } finally {
+        setVoicesLoading(false);
+      }
+    }
+    loadVoices();
+  }, []);
+
+  // Handle voice preview playback
+  const playVoicePreview = (voice: VoiceOption) => {
+    if (!voice.previewUrl) return;
+    
+    if (playingVoiceId === voice.id) {
+      // Stop playing
+      audioRef.current?.pause();
+      setPlayingVoiceId(null);
+    } else {
+      // Play new voice
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      audioRef.current = new Audio(voice.previewUrl);
+      audioRef.current.play();
+      audioRef.current.onended = () => setPlayingVoiceId(null);
+      setPlayingVoiceId(voice.id);
+    }
+  };
 
   const handleFetch = async () => {
     if (!url) return;
@@ -319,7 +380,13 @@ export function ConversionFlow() {
                 {/* Left column: Voice selection */}
                 <div className="w-48 flex-shrink-0 space-y-3">
                   <h3 className="text-sm font-medium text-gray-900 mb-3">Voices</h3>
-                  {voiceOptions.map((voice) => {
+                  {voicesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    </div>
+                  ) : voiceOptions.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-4">No voices available</p>
+                  ) : voiceOptions.map((voice) => {
                     const allAssigned = textSegments.length > 0 && textSegments.every(s => s.voiceId === voice.id);
                     return (
                       <div
@@ -349,11 +416,23 @@ export function ConversionFlow() {
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                           <button 
-                            className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-                            onClick={(e) => { e.stopPropagation(); }}
+                            className={`flex items-center gap-1 text-xs transition-colors ${
+                              playingVoiceId === voice.id 
+                                ? 'text-gray-900 font-medium' 
+                                : 'text-gray-500 hover:text-gray-700'
+                            } ${!voice.previewUrl ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              playVoicePreview(voice);
+                            }}
+                            disabled={!voice.previewUrl}
                           >
-                            <Volume2 className="w-3 h-3" />
-                            Preview
+                            {playingVoiceId === voice.id ? (
+                              <Square className="w-3 h-3" />
+                            ) : (
+                              <Volume2 className="w-3 h-3" />
+                            )}
+                            {playingVoiceId === voice.id ? 'Stop' : 'Preview'}
                           </button>
                           {/* Apply all toggle */}
                           <div 
