@@ -528,7 +528,7 @@ export function ConversionFlow() {
                   <div className="pt-3 border-t border-gray-200 mt-3">
                     <p className="text-xs text-gray-500 mb-2">
                       <a 
-                        href="https://elevenlabs.io/voice-library" 
+                        href="https://elevenlabs.io/app/voice-library" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:underline"
