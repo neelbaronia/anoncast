@@ -78,6 +78,12 @@ const steps = [
   { id: "publish" as Step, label: "Publish", icon: Share2 },
 ];
 
+const getFirstSentence = (text: string) => {
+  if (!text) return "";
+  const match = text.match(/^.*?[.!?](?:\s|$)/);
+  return match ? match[0].trim() : text;
+};
+
 export function ConversionFlow() {
   const [currentStep, setCurrentStep] = useState<Step>("input");
   const [url, setUrl] = useState("");
@@ -97,6 +103,10 @@ export function ConversionFlow() {
   const [customVoiceId, setCustomVoiceId] = useState("");
   const [customVoiceLoading, setCustomVoiceLoading] = useState(false);
   const [customVoiceError, setCustomVoiceError] = useState<string | null>(null);
+  const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch voices from ElevenLabs
@@ -162,7 +172,6 @@ export function ConversionFlow() {
       
       // If voice is from shared library and not in user's account, try to add it
       if (data.inLibrary === false && data.voice.publicOwnerId) {
-        setCustomVoiceError('Adding voice to your library...');
         const addResponse = await fetch(`/api/voices/${voiceId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -226,6 +235,58 @@ export function ConversionFlow() {
     }
   };
 
+  // Handle final audio playback
+  useEffect(() => {
+    if (currentStep === 'publish' && generatedAudioUrl) {
+      if (!audioRef.current) {
+        audioRef.current = new Audio(generatedAudioUrl);
+      } else if (audioRef.current.src !== generatedAudioUrl) {
+        audioRef.current.src = generatedAudioUrl;
+      }
+      
+      const audio = audioRef.current;
+      
+      if (isPlaying) {
+        audio.play().catch(e => console.error("Playback failed", e));
+      } else {
+        audio.pause();
+      }
+      
+      const handleEnded = () => setIsPlaying(false);
+      const handleTimeUpdate = () => setAudioCurrentTime(audio.currentTime);
+      const handleLoadedMetadata = () => setAudioDuration(audio.duration);
+      
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('timeupdate', handleTimeUpdate);
+      audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+      
+      return () => {
+        audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('timeupdate', handleTimeUpdate);
+        audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
+    }
+  }, [isPlaying, generatedAudioUrl, currentStep]);
+
+  // Format time for player
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00";
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle Export Audio
+  const handleExportAudio = () => {
+    if (!generatedAudioUrl) return;
+    const a = document.createElement('a');
+    a.href = generatedAudioUrl;
+    a.download = `podcast-${previewData?.title || 'audio'}.mp3`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
   const handleFetch = async () => {
     if (!url) return;
     setIsLoading(true);
@@ -251,7 +312,7 @@ export function ConversionFlow() {
       setTextSegments(
         scraped.paragraphs.map((text, i) => ({ 
           id: i, 
-          text, 
+          text: text.trim(), 
           voiceId: "", 
           confirmed: false 
         }))
@@ -265,6 +326,7 @@ export function ConversionFlow() {
   };
 
   const handleContinueToReview = () => {
+    setIsPlaying(false);
     setCurrentStep("review");
   };
 
@@ -275,16 +337,38 @@ export function ConversionFlow() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    setGenerationProgress(0);
+    setIsPlaying(false);
+    setGenerationProgress(10);
+    setGenerationError(null);
     
-    // Simulate generation progress
-    for (let i = 0; i <= 100; i += 5) {
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      setGenerationProgress(i);
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segments: textSegments }),
+      });
+      
+      setGenerationProgress(50);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate audio');
+      }
+      
+      const blob = await response.blob();
+      const audioUrl = URL.createObjectURL(blob);
+      setGeneratedAudioUrl(audioUrl);
+      
+      setGenerationProgress(100);
+      setTimeout(() => {
+        setIsGenerating(false);
+        setCurrentStep("publish");
+      }, 500);
+    } catch (error) {
+      console.error('Generation error:', error);
+      setGenerationError(error instanceof Error ? error.message : 'Failed to generate audio');
+      setIsGenerating(false);
     }
-    
-    setIsGenerating(false);
-    setCurrentStep("publish");
   };
 
   const getCurrentStepIndex = () => steps.findIndex((s) => s.id === currentStep);
@@ -495,7 +579,7 @@ export function ConversionFlow() {
                           />
                           <div className="flex-1">
                             <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
-                            <span className="block text-xs text-gray-500">{voice.description}</span>
+                            <span className="block text-xs text-gray-500">{getFirstSentence(voice.description)}</span>
                           </div>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
@@ -931,6 +1015,26 @@ export function ConversionFlow() {
                     </p>
                   </div>
                 </div>
+              ) : generationError ? (
+                <div className="space-y-4 py-8 text-center">
+                  <div className="text-red-500 mb-2">
+                    <X className="w-10 h-10 mx-auto mb-2" />
+                    <p className="font-semibold">Generation failed</p>
+                  </div>
+                  <p className="text-sm text-gray-600 max-w-xs mx-auto">
+                    {generationError}
+                  </p>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setGenerationError(null);
+                      setCurrentStep("review");
+                    }}
+                    className="mt-4"
+                  >
+                    Back to Review
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-6 py-4">
                   <div className="flex items-center justify-center">
@@ -1022,16 +1126,19 @@ export function ConversionFlow() {
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-900 mb-1">{previewData?.title || "Untitled"}</h3>
                   <p className="text-sm text-gray-500">
-                    {Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150)} min • {previewData?.author || "Unknown"}
+                    {formatTime(audioDuration)} • {previewData?.author || "Unknown"}
                   </p>
                   {/* Mini progress bar */}
                   <div className="mt-3 flex items-center gap-2">
-                    <span className="text-xs text-gray-400">0:00</span>
+                    <span className="text-xs text-gray-400">{formatTime(audioCurrentTime)}</span>
                     <div className="flex-1 h-1 bg-gray-200 rounded-full">
-                      <div className="h-full bg-gray-900 rounded-full w-0" />
+                      <div 
+                        className="h-full bg-gray-900 rounded-full transition-all duration-100" 
+                        style={{ width: `${(audioCurrentTime / audioDuration) * 100 || 0}%` }}
+                      />
                     </div>
                     <span className="text-xs text-gray-400">
-                      {Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150)}:00
+                      {formatTime(audioDuration)}
                     </span>
                   </div>
                 </div>
@@ -1042,9 +1149,13 @@ export function ConversionFlow() {
                   <Share2 className="w-4 h-4 mr-2" />
                   Add to RSS Feed
                 </Button>
-                <Button variant="outline" className="h-12 border-gray-200 text-gray-700 hover:bg-gray-50">
-                    Export Audio
-                  </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleExportAudio}
+                  className="h-12 border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  Export Audio
+                </Button>
               </div>
 
               <div className="text-center">

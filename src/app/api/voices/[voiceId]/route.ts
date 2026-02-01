@@ -4,6 +4,25 @@ const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
 // Helper to search shared voices
 async function findSharedVoice(voiceId: string, apiKey: string) {
+  // First try searching specifically for this ID using the search parameter
+  // This works for library IDs like pVnrL...
+  const searchResponse = await fetch(
+    `${ELEVENLABS_API_URL}/shared-voices?search=${voiceId}`, 
+    {
+      headers: {
+        'xi-api-key': apiKey,
+        'Accept': 'application/json',
+      },
+    }
+  );
+
+  if (searchResponse.ok) {
+    const data = await searchResponse.json();
+    const voice = data.voices?.find((v: { voice_id: string }) => v.voice_id === voiceId);
+    if (voice) return voice;
+  }
+
+  // Fallback to paginated search if search param didn't return exact match
   for (let page = 0; page < 5; page++) {
     const sharedResponse = await fetch(
       `${ELEVENLABS_API_URL}/shared-voices?page_size=100&page=${page}`, 
@@ -81,7 +100,7 @@ export async function GET(
             name: voice.name,
             description: voice.description || `${voice.gender || ''} ${voice.accent || ''} voice`.trim(),
             previewUrl: voice.preview_url || '',
-            publicOwnerId: voice.public_owner_id, // Need this to add to library
+            publicOwnerId: voice.public_owner_id,
           },
           inLibrary: false,
         });

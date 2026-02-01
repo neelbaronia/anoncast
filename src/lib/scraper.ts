@@ -266,10 +266,13 @@ const genericScraper: PlatformScraper = {
             const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
             let paragraph = '';
             for (const sentence of sentences) {
-              paragraph += sentence.trim() + ' ';
+              const trimmedSentence = sentence.trim();
+              if (trimmedSentence) {
+                paragraph += (paragraph ? ' ' : '') + trimmedSentence;
+              }
               // Create a new paragraph every ~500 chars
               if (paragraph.length > 500) {
-                contentParagraphs.push(paragraph.trim());
+                contentParagraphs.push(paragraph);
                 paragraph = '';
               }
             }
@@ -336,18 +339,21 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
     }
   }
   
-  // Deduplicate paragraphs (some pages have the same content in multiple places)
+  // Deduplicate paragraphs and trim them
   const rawParagraphs = scraperResult.paragraphs || [];
   const seen = new Set<string>();
-  const paragraphs = rawParagraphs.filter(p => {
-    // Normalize for comparison (trim and lowercase)
-    const normalized = p.trim().toLowerCase();
-    if (seen.has(normalized)) {
-      return false;
+  const paragraphs: string[] = [];
+  
+  for (const p of rawParagraphs) {
+    const trimmed = p.trim();
+    if (!trimmed) continue;
+    
+    const normalized = trimmed.toLowerCase();
+    if (!seen.has(normalized)) {
+      seen.add(normalized);
+      paragraphs.push(trimmed);
     }
-    seen.add(normalized);
-    return true;
-  });
+  }
   
   // Combine paragraphs into full content
   const content = paragraphs.join('\n\n');
