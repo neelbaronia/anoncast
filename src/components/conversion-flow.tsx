@@ -47,14 +47,18 @@ interface TextSegment {
   confirmed: boolean;
 }
 
-// Full mock article text broken into paragraphs
-const mockFullText = [
-  "As artificial intelligence continues to evolve, we're witnessing a fundamental shift in how content is created, distributed, and consumed. This article explores the implications for creators and audiences alike.",
-  "The rise of AI-powered tools has democratized content creation in unprecedented ways. What once required expensive equipment and specialized skills can now be accomplished with a few clicks. From writing assistance to image generation, the barriers to entry have never been lower.",
-  "However, this democratization comes with its own set of challenges. As the volume of content increases exponentially, standing out becomes increasingly difficult. Quality and authenticity become the new differentiators in a sea of AI-generated material.",
-  "For creators, the key lies in finding the right balance between leveraging AI capabilities and maintaining their unique voice. The most successful content creators of tomorrow will be those who can effectively collaborate with AI tools while preserving the human elements that resonate with audiences.",
-  "Looking ahead, we can expect even more sophisticated AI tools that understand context, emotion, and nuance. The future of content creation isn't about AI replacing humans—it's about AI empowering humans to create more, create better, and reach wider audiences than ever before.",
-];
+interface ScrapedContent {
+  title: string;
+  author: string;
+  publishDate: string | null;
+  featuredImage: string | null;
+  content: string;
+  paragraphs: string[];
+  wordCount: number;
+  estimatedReadTime: string;
+  platform: string;
+  url: string;
+}
 
 const steps = [
   { id: "input" as Step, label: "Paste Link", icon: Link },
@@ -70,31 +74,49 @@ export function ConversionFlow() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [previewData, setPreviewData] = useState<typeof mockContent | null>(null);
-  const [textSegments, setTextSegments] = useState<TextSegment[]>(
-    mockFullText.map((text, i) => ({ id: i, text, voiceId: "", confirmed: false }))
-  );
+  const [previewData, setPreviewData] = useState<ScrapedContent | null>(null);
+  const [textSegments, setTextSegments] = useState<TextSegment[]>([]);
   const [activeVoice, setActiveVoice] = useState<string>("");
   const [showPayment, setShowPayment] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
-
-  // Mock extracted content
-  const mockContent = {
-    title: "The Future of AI in Content Creation",
-    author: "Jane Smith",
-    wordCount: 1847,
-    readingTime: "8 min",
-    excerpt: "As artificial intelligence continues to evolve, we're witnessing a fundamental shift in how content is created, distributed, and consumed. This article explores the implications for creators and audiences alike...",
-    featuredImage: "", // URL to featured image if available
-  };
+  const [scrapeError, setScrapeError] = useState<string | null>(null);
 
   const handleFetch = async () => {
     if (!url) return;
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    setPreviewData(mockContent);
+    setScrapeError(null);
+    
+    try {
+      const response = await fetch('/api/scrape', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to scrape URL');
+      }
+      
+      const scraped: ScrapedContent = result.data;
+      setPreviewData(scraped);
+      
+      // Initialize text segments from scraped paragraphs
+      setTextSegments(
+        scraped.paragraphs.map((text, i) => ({ 
+          id: i, 
+          text, 
+          voiceId: "", 
+          confirmed: false 
+        }))
+      );
+    } catch (error) {
+      setScrapeError(error instanceof Error ? error.message : 'Failed to fetch content');
+      setPreviewData(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleContinueToReview = () => {
@@ -208,7 +230,13 @@ export function ConversionFlow() {
                 )}
               </div>
 
-              {!previewData && (
+              {scrapeError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {scrapeError}
+                </div>
+              )}
+
+              {!previewData && !scrapeError && (
                 <div className="flex items-center justify-center gap-4 pt-4">
                   <span className="text-xs text-gray-400">Works with</span>
                   <div className="flex gap-3">
@@ -240,18 +268,23 @@ export function ConversionFlow() {
                       </div>
                     )}
                     <div className="p-4 space-y-2 flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {previewData.title}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {previewData.title}
+                        </h3>
+                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs">
+                          {previewData.platform}
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>By {previewData.author}</span>
+                        <span>By {previewData.author || 'Unknown'}</span>
                         <span>•</span>
                         <span>{previewData.wordCount} words</span>
                         <span>•</span>
-                        <span>{previewData.readingTime} read</span>
+                        <span>{previewData.estimatedReadTime}</span>
                       </div>
                       <p className="text-gray-600 leading-relaxed line-clamp-2 text-sm">
-                        {previewData.excerpt}
+                        {previewData.paragraphs[0]?.substring(0, 200)}...
                       </p>
                     </div>
                   </div>
@@ -327,7 +360,7 @@ export function ConversionFlow() {
                 <div className="flex-1 border border-gray-200 rounded-lg p-6 max-h-[500px] overflow-y-auto">
                   <input
                     type="text"
-                    defaultValue={mockContent.title}
+                    defaultValue={previewData?.title || "Untitled"}
                     className="text-lg font-semibold text-gray-900 mb-4 w-full bg-transparent border-none focus:outline-none focus:ring-0"
                   />
                   <div className="space-y-3">
@@ -700,9 +733,9 @@ export function ConversionFlow() {
               {/* Audio Card */}
               <div className="border border-gray-200 rounded-xl overflow-hidden max-w-md mx-auto">
                 <div className="relative">
-                  {mockContent.featuredImage ? (
+                  {previewData?.featuredImage ? (
                     <img 
-                      src={mockContent.featuredImage} 
+                      src={previewData.featuredImage} 
                       alt="Featured" 
                       className="w-full h-40 object-cover"
                     />
@@ -726,9 +759,9 @@ export function ConversionFlow() {
                   </button>
                 </div>
                 <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-1">{mockContent.title}</h3>
+                  <h3 className="font-semibold text-gray-900 mb-1">{previewData?.title || "Untitled"}</h3>
                   <p className="text-sm text-gray-500">
-                    {Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150)} min • {mockContent.author}
+                    {Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150)} min • {previewData?.author || "Unknown"}
                   </p>
                   {/* Mini progress bar */}
                   <div className="mt-3 flex items-center gap-2">
