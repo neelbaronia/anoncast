@@ -94,6 +94,9 @@ export function ConversionFlow() {
   const [voiceOptions, setVoiceOptions] = useState<VoiceOption[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const [customVoiceId, setCustomVoiceId] = useState("");
+  const [customVoiceLoading, setCustomVoiceLoading] = useState(false);
+  const [customVoiceError, setCustomVoiceError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch voices from ElevenLabs
@@ -121,6 +124,56 @@ export function ConversionFlow() {
     }
     loadVoices();
   }, []);
+
+  // Load custom voice by ID
+  const loadCustomVoice = async () => {
+    if (!customVoiceId.trim()) return;
+    
+    // Extract voice ID from URL if pasted
+    let voiceId = customVoiceId.trim();
+    const urlMatch = voiceId.match(/voice(?:s)?[\/=]([a-zA-Z0-9]+)/);
+    if (urlMatch) {
+      voiceId = urlMatch[1];
+    }
+    
+    // Check if already added
+    if (voiceOptions.some(v => v.id === voiceId)) {
+      setActiveVoice(voiceId);
+      setCustomVoiceId("");
+      return;
+    }
+    
+    setCustomVoiceLoading(true);
+    setCustomVoiceError(null);
+    
+    try {
+      const response = await fetch(`/api/voices/${voiceId}`);
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Voice not found');
+      }
+      
+      // Add the custom voice with a unique color
+      const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
+      const newVoice: VoiceOption = {
+        id: data.voice.id,
+        name: data.voice.name,
+        description: data.voice.description || 'Custom voice',
+        previewUrl: data.voice.previewUrl || '',
+        color: customColor.color,
+        bgColor: customColor.bgColor,
+      };
+      
+      setVoiceOptions(prev => [...prev, newVoice]);
+      setActiveVoice(newVoice.id);
+      setCustomVoiceId("");
+    } catch (error) {
+      setCustomVoiceError(error instanceof Error ? error.message : 'Failed to load voice');
+    } finally {
+      setCustomVoiceLoading(false);
+    }
+  };
 
   // Handle voice preview playback
   const playVoicePreview = (voice: VoiceOption) => {
@@ -470,6 +523,44 @@ export function ConversionFlow() {
                       </div>
                     );
                   })}
+                  
+                  {/* Custom voice input */}
+                  <div className="pt-3 border-t border-gray-200 mt-3">
+                    <p className="text-xs text-gray-500 mb-2">Or use your own voice:</p>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        placeholder="Voice ID or link"
+                        value={customVoiceId}
+                        onChange={(e) => {
+                          setCustomVoiceId(e.target.value);
+                          setCustomVoiceError(null);
+                        }}
+                        className="h-8 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            loadCustomVoice();
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={loadCustomVoice}
+                        disabled={!customVoiceId.trim() || customVoiceLoading}
+                        size="sm"
+                        className="h-8 px-3"
+                      >
+                        {customVoiceLoading ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          'Add'
+                        )}
+                      </Button>
+                    </div>
+                    {customVoiceError && (
+                      <p className="text-xs text-red-500 mt-1">{customVoiceError}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Right column: Text content */}
