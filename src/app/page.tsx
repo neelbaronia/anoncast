@@ -124,12 +124,6 @@ export default function Home() {
               anoncast
             </div>
             <nav className="flex items-center gap-8">
-              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                Pricing
-              </a>
-              <a href="#" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
-                How it works
-              </a>
               <button className="text-sm font-medium px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors">
                 Sign in
               </button>
