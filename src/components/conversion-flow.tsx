@@ -382,11 +382,18 @@ export function ConversionFlow() {
                                     s.id === segment.id ? { ...s, voiceId: activeVoice, confirmed: true } : s
                                   )
                                 );
-                              } else if (hasVoice) {
-                                // Toggle confirmation if same voice or no active voice
+                              } else if (hasVoice && segment.confirmed) {
+                                // Uncheck: clear voice and confirmation, return to neutral
                                 setTextSegments(segments =>
                                   segments.map(s =>
-                                    s.id === segment.id ? { ...s, confirmed: !s.confirmed } : s
+                                    s.id === segment.id ? { ...s, voiceId: "", confirmed: false } : s
+                                  )
+                                );
+                              } else if (hasVoice && !segment.confirmed) {
+                                // Confirm existing voice
+                                setTextSegments(segments =>
+                                  segments.map(s =>
+                                    s.id === segment.id ? { ...s, confirmed: true } : s
                                   )
                                 );
                               } else if (activeVoice) {
