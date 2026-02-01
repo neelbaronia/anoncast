@@ -572,23 +572,19 @@ export function ConversionFlow() {
                                 );
                               }}
                               onInput={(e) => {
-                                // Auto-resize on input
                                 const target = e.target as HTMLTextAreaElement;
-                                target.style.height = "auto";
+                                target.style.height = "0";
                                 target.style.height = target.scrollHeight + "px";
-                              }}
-                              onFocus={(e) => {
-                                e.target.style.height = "auto";
-                                e.target.style.height = e.target.scrollHeight + "px";
                               }}
                               ref={(el) => {
                                 if (el) {
-                                  el.style.height = "auto";
+                                  el.style.height = "0";
                                   el.style.height = el.scrollHeight + "px";
                                 }
                               }}
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none leading-normal px-3 py-1.5 text-gray-700 overflow-hidden"
+                              rows={1}
+                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none leading-snug px-3 py-1 text-gray-700 overflow-hidden min-h-0"
                             />
                           </div>
                         </div>
