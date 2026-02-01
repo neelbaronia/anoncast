@@ -376,9 +376,9 @@ export function ConversionFlow() {
                 </p>
               </div>
 
-              <div className="flex gap-6">
+              <div className="flex gap-8">
                 {/* Left column: Voice selection */}
-                <div className="w-48 flex-shrink-0 space-y-3">
+                <div className="w-64 flex-shrink-0 space-y-3">
                   <h3 className="text-sm font-medium text-gray-900 mb-3">Voices</h3>
                   {voicesLoading ? (
                     <div className="flex items-center justify-center py-8">
