@@ -51,9 +51,9 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
     }
     const publicData = await publicResponse.json();
     const publicVoices: ElevenLabsVoice[] = publicData.voices || [];
+    const selectedIds = ['Xb7hH8MSUJpSbSDYk0k2', 'EXAVITQu4vr4xnSDxMaL', 'IKne3meq5aSn9XLyUdCD', 'JBFqnCBsd6RMkjVDRZzb'];
     return publicVoices
-      .filter(v => v.category === 'premade')
-      .slice(0, 12)
+      .filter(v => selectedIds.includes(v.voice_id))
       .map(v => ({
         id: v.voice_id,
         name: v.name,
@@ -70,9 +70,16 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
 
   // Filter to get the best pre-made voices and map to our format
   // Prioritize "premade" category voices which are high-quality and free to use
+  // Specific voices we want to show
+  const selectedVoiceIds = [
+    'Xb7hH8MSUJpSbSDYk0k2', // Alice
+    'EXAVITQu4vr4xnSDxMaL', // Sarah
+    'IKne3meq5aSn9XLyUdCD', // Charlie
+    'JBFqnCBsd6RMkjVDRZzb', // George
+  ];
+  
   const premadeVoices = voices
-    .filter(v => v.category === 'premade' || v.category === 'professional')
-    .slice(0, 12) // Limit to top 12 voices
+    .filter(v => selectedVoiceIds.includes(v.voice_id))
     .map(v => ({
       id: v.voice_id,
       name: v.name,

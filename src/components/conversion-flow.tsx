@@ -131,9 +131,15 @@ export function ConversionFlow() {
     
     // Extract voice ID from URL if pasted
     let voiceId = customVoiceId.trim();
-    const urlMatch = voiceId.match(/voice(?:s)?[\/=]([a-zA-Z0-9]+)/);
-    if (urlMatch) {
-      voiceId = urlMatch[1];
+    // Handle URLs like: 
+    // - https://elevenlabs.io/app/voice-library?voiceId=xxx
+    // - https://elevenlabs.io/voice/xxx
+    const queryMatch = voiceId.match(/[?&]voiceId=([a-zA-Z0-9]+)/);
+    const pathMatch = voiceId.match(/voice(?:s)?\/([a-zA-Z0-9]+)/);
+    if (queryMatch) {
+      voiceId = queryMatch[1];
+    } else if (pathMatch) {
+      voiceId = pathMatch[1];
     }
     
     // Check if already added
@@ -154,6 +160,30 @@ export function ConversionFlow() {
         throw new Error(data.error || 'Voice not found');
       }
       
+      // If voice is from shared library and not in user's account, try to add it
+      if (data.inLibrary === false && data.voice.publicOwnerId) {
+        setCustomVoiceError('Adding voice to your library...');
+        const addResponse = await fetch(`/api/voices/${voiceId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            publicOwnerId: data.voice.publicOwnerId,
+            name: data.voice.name,
+          }),
+        });
+        
+        const addData = await addResponse.json();
+        if (!addResponse.ok || !addData.success) {
+          // If permission error, still allow using the voice for preview
+          // (generation might fail later, but at least they can see it)
+          if (addData.error?.includes('voices_write')) {
+            console.warn('Could not auto-add voice, but can still use for preview');
+          } else {
+            throw new Error(addData.error || 'Failed to add voice to library');
+          }
+        }
+      }
+      
       // Add the custom voice with a unique color
       const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
       const newVoice: VoiceOption = {
@@ -168,6 +198,7 @@ export function ConversionFlow() {
       setVoiceOptions(prev => [...prev, newVoice]);
       setActiveVoice(newVoice.id);
       setCustomVoiceId("");
+      setCustomVoiceError(null);
     } catch (error) {
       setCustomVoiceError(error instanceof Error ? error.message : 'Failed to load voice');
     } finally {
@@ -536,10 +567,13 @@ export function ConversionFlow() {
                         Use another ElevenLabs voice
                       </a>
                     </p>
+                    <p className="text-[10px] text-gray-400 mb-1">
+                      Add voice to VoiceLab first, then paste ID
+                    </p>
                     <div className="flex gap-2">
                       <Input
                         type="text"
-                        placeholder="Voice ID or link"
+                        placeholder="Paste voice ID from VoiceLab"
                         value={customVoiceId}
                         onChange={(e) => {
                           setCustomVoiceId(e.target.value);
