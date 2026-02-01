@@ -336,8 +336,20 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
     }
   }
   
+  // Deduplicate paragraphs (some pages have the same content in multiple places)
+  const rawParagraphs = scraperResult.paragraphs || [];
+  const seen = new Set<string>();
+  const paragraphs = rawParagraphs.filter(p => {
+    // Normalize for comparison (trim and lowercase)
+    const normalized = p.trim().toLowerCase();
+    if (seen.has(normalized)) {
+      return false;
+    }
+    seen.add(normalized);
+    return true;
+  });
+  
   // Combine paragraphs into full content
-  const paragraphs = scraperResult.paragraphs || [];
   const content = paragraphs.join('\n\n');
   const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
   
