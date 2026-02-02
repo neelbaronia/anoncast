@@ -18,27 +18,27 @@ A web platform that allows bloggers to convert their written content into audio 
 
 > **Last updated:** Jan 31, 2026
 
-### Tomorrow's Tasks
-- [ ] **Blog Scraping Implementation**
-  - Build `/api/scrape` endpoint
-  - Implement Cheerio-based content extraction for static sites
-  - Add Puppeteer fallback for SPAs/dynamic content
-  - Extract: title, author, featured image, body text, publish date
-  - Support platforms: Medium, Substack, WordPress, Ghost, custom blogs
-
-- [ ] **ElevenLabs Integration**
-  - Set up ElevenLabs API client
-  - Build `/api/generate` endpoint
-  - Implement voice selection and multi-voice support
-  - Handle long-form content chunking (ElevenLabs has character limits)
-  - Stream audio generation progress to frontend
-  - Store generated audio files (local for now, R2 later)
+### Next Tasks
+- [ ] **RSS Hosting & Feed Generation**
+  - Implement permanent audio storage (Cloudflare R2)
+  - Generate valid RSS 2.0 podcast feed
+- [ ] **Production Stripe API Migration**
+  - Switch back to live keys and production environment
+- [ ] **Dynamic Scraping Upgrade**
+  - Integrate Puppeteer/Playwright for Notion/Substack support
+- [ ] **Podcast Distribution**
+  - Spotify/Apple Podcasts submission guide
+- [ ] **User Accounts & Storage**
+  - Supabase Auth integration
 
 ### Completed
 - [x] Frontend prototype with conversion flow UI
 - [x] Voice assignment interface with color-coded paragraphs
-- [x] Payment flow UI (mock Stripe integration)
-- [x] Publish preview card with audio player
+- [x] Stripe integration for pay-as-you-go generation
+- [x] ElevenLabs audio generation and concatenation
+- [x] Real-time audio playback and export
+- [x] Blog scraping for static sites (Cheerio)
+- [x] Custom ElevenLabs voice support (ID/Link parsing)
 
 ---
 
@@ -521,3 +521,4 @@ NEXT_PUBLIC_APP_URL=
 ---
 
 *Last updated: January 31, 2026*
+e

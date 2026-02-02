@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { loadStripe } from "@stripe/stripe-js";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,7 +95,6 @@ export function ConversionFlow() {
   const [previewData, setPreviewData] = useState<ScrapedContent | null>(null);
   const [textSegments, setTextSegments] = useState<TextSegment[]>([]);
   const [activeVoice, setActiveVoice] = useState<string>("");
-  const [showPayment, setShowPayment] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [scrapeError, setScrapeError] = useState<string | null>(null);
   const [voiceOptions, setVoiceOptions] = useState<VoiceOption[]>([]);
@@ -107,7 +107,52 @@ export function ConversionFlow() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [isTestMode, setIsTestMode] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Check for payment success or existing preview on mount
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // 1. Check for payment success
+    if (searchParams.get('payment_success') === 'true') {
+      window.history.replaceState({}, '', window.location.pathname);
+      const savedSegments = localStorage.getItem('pending_segments');
+      const savedStep = localStorage.getItem('pending_step');
+      const savedPreview = localStorage.getItem('pending_preview');
+      
+      if (savedSegments && savedStep === 'generate') {
+        const segments = JSON.parse(savedSegments);
+        setTextSegments(segments);
+        if (savedPreview) {
+          setPreviewData(JSON.parse(savedPreview));
+        }
+        setCurrentStep('generate');
+        setTimeout(() => {
+          handleGenerate(segments);
+        }, 500);
+        return; // Exit early if we handled payment success
+      }
+    }
+
+    // 2. Check for existing preview data if not in a flow
+    const lastTitle = localStorage.getItem('last_title');
+    if (lastTitle && !previewData) {
+      // Reconstruct basic preview data from fallback storage
+      setPreviewData({
+        title: lastTitle,
+        author: localStorage.getItem('last_author') || '',
+        featuredImage: localStorage.getItem('last_image') || null,
+        platform: localStorage.getItem('last_platform') || 'Custom',
+        url: localStorage.getItem('last_url') || '',
+        wordCount: parseInt(localStorage.getItem('last_word_count') || '0'),
+        estimatedReadTime: localStorage.getItem('last_reading_time') || '',
+        paragraphs: [], // We don't store full paragraphs in fallback
+        content: '',
+        publishDate: null
+      });
+    }
+  }, []);
 
   // Fetch voices from ElevenLabs
   useEffect(() => {
@@ -276,16 +321,64 @@ export function ConversionFlow() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleScrub = (value: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = value;
+      setAudioCurrentTime(value);
+    }
+  };
+
   // Handle Export Audio
   const handleExportAudio = () => {
     if (!generatedAudioUrl) return;
+    const title = previewData?.title || localStorage.getItem('last_title') || 'audio';
     const a = document.createElement('a');
     a.href = generatedAudioUrl;
-    a.download = `podcast-${previewData?.title || 'audio'}.mp3`;
+    a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
   };
+
+  const handlePayment = async () => {
+    setPaymentProcessing(true);
+    try {
+      // Save state to localStorage so we can resume after redirect
+      localStorage.setItem('pending_segments', JSON.stringify(textSegments));
+      localStorage.setItem('pending_step', 'generate');
+      if (previewData) {
+        localStorage.setItem('pending_preview', JSON.stringify(previewData));
+      }
+      
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75,
+          title: previewData?.title
+        }),
+      });
+      
+      const { url, isTestMode: apiTestMode } = await response.json();
+      if (apiTestMode) {
+        setIsTestMode(true);
+        localStorage.setItem('is_test_mode', 'true');
+      } else {
+        localStorage.removeItem('is_test_mode');
+      }
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Failed to start payment process');
+      setPaymentProcessing(false);
+    }
+  };
+
+  const getCurrentStepIndex = () => steps.findIndex((s) => s.id === currentStep);
 
   const handleFetch = async () => {
     if (!url) return;
@@ -307,6 +400,15 @@ export function ConversionFlow() {
       
       const scraped: ScrapedContent = result.data;
       setPreviewData(scraped);
+      
+      // Secondary fallback storage for the final card and persistence
+      localStorage.setItem('last_title', scraped.title);
+      localStorage.setItem('last_author', scraped.author || 'Unknown Author');
+      localStorage.setItem('last_image', scraped.featuredImage || '');
+      localStorage.setItem('last_platform', scraped.platform);
+      localStorage.setItem('last_url', scraped.url);
+      localStorage.setItem('last_word_count', scraped.wordCount.toString());
+      localStorage.setItem('last_reading_time', scraped.estimatedReadTime);
       
       // Initialize text segments from scraped paragraphs
       setTextSegments(
@@ -333,24 +435,49 @@ export function ConversionFlow() {
   const handleClearPreview = () => {
     setPreviewData(null);
     setUrl("");
+    localStorage.removeItem('pending_preview');
+    localStorage.removeItem('pending_segments');
+    localStorage.removeItem('pending_step');
+    localStorage.removeItem('last_title');
+    localStorage.removeItem('last_author');
+    localStorage.removeItem('last_image');
+    localStorage.removeItem('last_platform');
+    localStorage.removeItem('last_url');
+    localStorage.removeItem('last_word_count');
+    localStorage.removeItem('last_reading_time');
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (segmentsToUse = textSegments) => {
     setIsGenerating(true);
     setIsPlaying(false);
-    setGenerationProgress(10);
+    setGenerationProgress(5);
     setGenerationError(null);
+    
+    // Simulate continuous progress
+    const progressInterval = setInterval(() => {
+      setGenerationProgress(prev => {
+        if (prev >= 92) return prev; // Hold at 92% until actual completion
+        const increment = Math.random() * 2 + 0.5; // Random realistic increments
+        return Math.min(prev + increment, 92);
+      });
+    }, 400);
     
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ segments: textSegments }),
+        body: JSON.stringify({ 
+          segments: segmentsToUse,
+          metadata: {
+            title: previewData?.title || localStorage.getItem('last_title'),
+            author: previewData?.author || localStorage.getItem('last_author'),
+            image: previewData?.featuredImage || localStorage.getItem('last_image')
+          }
+        }),
       });
       
-      setGenerationProgress(50);
-      
       if (!response.ok) {
+        clearInterval(progressInterval);
         const error = await response.json();
         throw new Error(error.error || 'Failed to generate audio');
       }
@@ -359,19 +486,21 @@ export function ConversionFlow() {
       const audioUrl = URL.createObjectURL(blob);
       setGeneratedAudioUrl(audioUrl);
       
+      // Complete progress rapidly once file is ready
+      clearInterval(progressInterval);
       setGenerationProgress(100);
+      
       setTimeout(() => {
         setIsGenerating(false);
         setCurrentStep("publish");
-      }, 500);
+      }, 600);
     } catch (error) {
+      clearInterval(progressInterval);
       console.error('Generation error:', error);
       setGenerationError(error instanceof Error ? error.message : 'Failed to generate audio');
       setIsGenerating(false);
     }
   };
-
-  const getCurrentStepIndex = () => steps.findIndex((s) => s.id === currentStep);
 
   return (
     <div className={`mx-auto ${currentStep === "review" ? "max-w-5xl" : "max-w-3xl"} transition-all duration-300`}>
@@ -416,289 +545,307 @@ export function ConversionFlow() {
       </div>
 
       {/* Step Content */}
-      <Card className="border border-gray-200 shadow-sm bg-white">
-        <CardContent className="p-8">
-          {/* Step 1: Input */}
-          {currentStep === "input" && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Paste your blog link
-                </h2>
-                <p className="text-gray-600">
-                  We'll extract the content and prepare it for audio conversion
-                </p>
-              </div>
-              
-              <div className="flex gap-3">
-                <Input
-                  type="url"
-                  placeholder="https://your-blog.com/article"
-                  value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    if (previewData) setPreviewData(null);
-                  }}
-                  className="flex-1 h-12 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
-                />
-                {(!previewData || isLoading) && (
-                  <Button 
-                    onClick={handleFetch}
-                    disabled={!url || isLoading}
-                    className="h-12 px-6 bg-gray-900 hover:bg-gray-800 text-white"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        Fetch
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </>
+      <Card className="border border-gray-200 shadow-sm bg-white overflow-hidden">
+        <CardContent className="p-0">
+          {/* Persistent Preview Header */}
+          {previewData && currentStep !== "publish" && (
+            <div className="bg-gray-50 border-b border-gray-100 p-6">
+              <div className="flex gap-6">
+                {previewData.featuredImage ? (
+                  <img 
+                    src={previewData.featuredImage} 
+                    alt="Featured" 
+                    className="w-24 h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                    <FileText className="w-8 h-8 text-gray-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                      {previewData.title}
+                    </h3>
+                    {previewData.platform && (
+                      <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-5">
+                        {previewData.platform}
+                      </Badge>
                     )}
-                  </Button>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
+                    <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
+                    <span>•</span>
+                    <span>{previewData.wordCount} words</span>
+                    <span>•</span>
+                    <span>{previewData.estimatedReadTime}</span>
+                  </div>
+                  <a 
+                    href={previewData.url || "#"} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:underline block truncate max-w-md"
+                  >
+                    {previewData.url}
+                  </a>
+                </div>
+                {currentStep === "input" && (
+                  <button 
+                    onClick={handleClearPreview}
+                    className="text-gray-400 hover:text-gray-600 p-1 self-start"
+                    title="Clear preview"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 )}
               </div>
-
-              {scrapeError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {scrapeError}
-                </div>
-              )}
-
-              {!previewData && !scrapeError && (
-                <div className="flex items-center justify-center gap-4 pt-4">
-                  <span className="text-xs text-gray-400">Works with</span>
-                  <div className="flex gap-3">
-                    {["Medium", "Substack", "WordPress", "Ghost", "Custom"].map((platform) => (
-                      <Badge 
-                        key={platform} 
-                        variant="secondary"
-                        className="bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      >
-                        {platform}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {previewData && (
-                <>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden flex">
-                    {previewData.featuredImage ? (
-                      <img 
-                        src={previewData.featuredImage} 
-                        alt="Featured" 
-                        className="w-32 h-auto object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="w-32 bg-gray-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs text-gray-400 text-center px-2">No image</span>
-                      </div>
-                    )}
-                    <div className="p-4 space-y-2 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {previewData.title}
-                        </h3>
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs">
-                          {previewData.platform}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>By {previewData.author || 'Unknown'}</span>
-                        <span>•</span>
-                        <span>{previewData.wordCount} words</span>
-                        <span>•</span>
-                        <span>{previewData.estimatedReadTime}</span>
-                      </div>
-                      <p className="text-gray-600 leading-relaxed line-clamp-2 text-sm">
-                        {previewData.paragraphs[0]?.substring(0, 200)}...
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={handleContinueToReview}
-                      className="h-12 px-6 bg-gray-900 hover:bg-gray-800 text-white"
-                    >
-                      Continue
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </>
-              )}
             </div>
           )}
 
-          {/* Step 2: Review */}
-          {currentStep === "review" && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Assign voices to your content
-                </h2>
-                <p className="text-gray-600">
-                  Select a voice, then click on paragraphs to assign that voice
-                </p>
-              </div>
+          <div className="p-8">
+            {/* Step 1: Input */}
+            {currentStep === "input" && (
+              <div className="space-y-6">
+                {!previewData && (
+                  <div className="text-center mb-8">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                      Paste your blog link
+                    </h2>
+                    <p className="text-gray-600">
+                      We'll extract the content and prepare it for audio conversion
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex gap-3">
+                  <Input
+                    type="url"
+                    placeholder="https://your-blog.com/article"
+                    value={url}
+                    onChange={(e) => {
+                      setUrl(e.target.value);
+                      if (previewData) handleClearPreview();
+                    }}
+                    className="flex-1 h-12 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
+                  />
+                  {(!previewData || isLoading) && (
+                    <Button 
+                      onClick={handleFetch}
+                      disabled={!url || isLoading}
+                      className="h-12 px-6 bg-gray-900 hover:bg-gray-800 text-white"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          Fetch
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
 
-              <div className="flex gap-8">
-                {/* Left column: Voice selection */}
-                <div className="w-64 flex-shrink-0 space-y-3">
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">Voices</h3>
-                  {voicesLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                {scrapeError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {scrapeError}
+                  </div>
+                )}
+
+                {!previewData && !scrapeError && (
+                  <div className="flex items-center justify-center gap-4 pt-4">
+                    <span className="text-xs text-gray-400">Works with</span>
+                    <div className="flex gap-3">
+                      {["Medium", "Substack", "WordPress", "Ghost", "Custom"].map((platform) => (
+                        <Badge 
+                          key={platform} 
+                          variant="secondary"
+                          className="bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        >
+                          {platform}
+                        </Badge>
+                      ))}
                     </div>
-                  ) : voiceOptions.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-4">No voices available</p>
-                  ) : voiceOptions.map((voice) => {
-                    const allAssigned = textSegments.length > 0 && textSegments.every(s => s.voiceId === voice.id);
-                    return (
-                      <div
-                        key={voice.id}
-                        className={`
-                          w-full p-3 rounded-lg border-2 text-left transition-all cursor-pointer
-                          ${activeVoice === voice.id
-                            ? "border-current shadow-sm"
-                            : "border-transparent hover:border-gray-200"
-                          }
-                        `}
-                        style={{ 
-                          backgroundColor: voice.bgColor,
-                          borderColor: activeVoice === voice.id ? voice.color : undefined
-                        }}
-                        onClick={() => setActiveVoice(voice.id)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: voice.color }}
-                          />
-                          <div className="flex-1">
-                            <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
-                            <span className="block text-xs text-gray-500">{getFirstSentence(voice.description)}</span>
+                  </div>
+                )}
+
+                {previewData && (
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      onClick={handleContinueToReview}
+                      size="lg"
+                      className="h-12 px-8 bg-gray-900 hover:bg-gray-800 text-white"
+                    >
+                      Continue to Review
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Review */}
+            {currentStep === "review" && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    Assign voices to your content
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    Select a voice from the left, then click paragraphs to assign
+                  </p>
+                </div>
+
+                <div className="flex gap-8">
+                  {/* Left column: Voice selection */}
+                  <div className="w-64 flex-shrink-0 space-y-3">
+                    <h3 className="text-sm font-medium text-gray-900 mb-3">Voices</h3>
+                    {voicesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : voiceOptions.length === 0 ? (
+                      <p className="text-sm text-gray-500 py-4">No voices available</p>
+                    ) : voiceOptions.map((voice) => {
+                      const allAssigned = textSegments.length > 0 && textSegments.every(s => s.voiceId === voice.id);
+                      return (
+                        <div
+                          key={voice.id}
+                          className={`
+                            w-full p-3 rounded-lg border-2 text-left transition-all cursor-pointer
+                            ${activeVoice === voice.id
+                              ? "border-current shadow-sm"
+                              : "border-transparent hover:border-gray-200"
+                            }
+                          `}
+                          style={{ 
+                            backgroundColor: voice.bgColor,
+                            borderColor: activeVoice === voice.id ? voice.color : undefined
+                          }}
+                          onClick={() => setActiveVoice(voice.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: voice.color }}
+                            />
+                            <div className="flex-1">
+                              <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
+                              <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">{getFirstSentence(voice.description)}</span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between">
-                          <button 
-                            className={`flex items-center gap-1 text-xs transition-colors ${
-                              playingVoiceId === voice.id 
-                                ? 'text-gray-900 font-medium' 
-                                : 'text-gray-500 hover:text-gray-700'
-                            } ${!voice.previewUrl ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              playVoicePreview(voice);
-                            }}
-                            disabled={!voice.previewUrl}
-                          >
-                            {playingVoiceId === voice.id ? (
-                              <Square className="w-3 h-3" />
-                            ) : (
-                              <Volume2 className="w-3 h-3" />
-                            )}
-                            {playingVoiceId === voice.id ? 'Stop' : 'Preview'}
-                          </button>
-                          {/* Apply all toggle */}
-                          <div 
-                            className="flex items-center gap-2 cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (allAssigned) {
-                                setTextSegments(segments =>
-                                  segments.map(s => ({ ...s, voiceId: "", confirmed: false }))
-                                );
-                              } else {
-                                setTextSegments(segments =>
-                                  segments.map(s => ({ ...s, voiceId: voice.id, confirmed: true }))
-                                );
-                                setActiveVoice(voice.id);
-                              }
-                            }}
-                          >
-                            <span className="text-xs text-gray-500">For all text</span>
-                            <div
-                              className="relative w-8 h-4 rounded-full transition-colors"
-                              style={{ 
-                                backgroundColor: allAssigned ? voice.color : '#e5e7eb'
+                          <div className="mt-2 flex items-center justify-between">
+                            <button 
+                              className={`flex items-center gap-1 text-[10px] transition-colors ${
+                                playingVoiceId === voice.id 
+                                  ? 'text-gray-900 font-medium' 
+                                  : 'text-gray-500 hover:text-gray-700'
+                              } ${!voice.previewUrl ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                playVoicePreview(voice);
+                              }}
+                              disabled={!voice.previewUrl}
+                            >
+                              {playingVoiceId === voice.id ? (
+                                <Square className="w-2.5 h-2.5" />
+                              ) : (
+                                <Volume2 className="w-2.5 h-2.5" />
+                              )}
+                              {playingVoiceId === voice.id ? 'Stop' : 'Preview'}
+                            </button>
+                            {/* Apply all toggle */}
+                            <div 
+                              className="flex items-center gap-1.5 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (allAssigned) {
+                                  setTextSegments(segments =>
+                                    segments.map(s => ({ ...s, voiceId: "", confirmed: false }))
+                                  );
+                                } else {
+                                  setTextSegments(segments =>
+                                    segments.map(s => ({ ...s, voiceId: voice.id, confirmed: true }))
+                                  );
+                                  setActiveVoice(voice.id);
+                                }
                               }}
                             >
-                              <div 
-                                className={`
-                                  absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all
-                                  ${allAssigned ? 'left-4' : 'left-0.5'}
-                                `}
-                              />
+                              <span className="text-[10px] text-gray-500">All text</span>
+                              <div
+                                className="relative w-7 h-3.5 rounded-full transition-colors"
+                                style={{ 
+                                  backgroundColor: allAssigned ? voice.color : '#e5e7eb'
+                                }}
+                              >
+                                <div 
+                                  className={`
+                                    absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow transition-all
+                                    ${allAssigned ? 'left-4' : 'left-0.5'}
+                                  `}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* Custom voice input */}
-                  <div className="pt-3 border-t border-gray-200 mt-3">
-                    <p className="text-xs text-gray-500 mb-2">
-                      <a 
-                        href="https://elevenlabs.io/app/voice-library" 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        Use another ElevenLabs voice
-                      </a>
-                    </p>
-                    <p className="text-[10px] text-gray-400 mb-1">
-                      Add voice to VoiceLab first, then paste ID
-                    </p>
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        placeholder="Paste voice ID from VoiceLab"
-                        value={customVoiceId}
-                        onChange={(e) => {
-                          setCustomVoiceId(e.target.value);
-                          setCustomVoiceError(null);
-                        }}
-                        className="h-8 text-xs"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            loadCustomVoice();
-                          }
-                        }}
-                      />
-                      <Button
-                        onClick={loadCustomVoice}
-                        disabled={!customVoiceId.trim() || customVoiceLoading}
-                        size="sm"
-                        className="h-8 px-3"
-                      >
-                        {customVoiceLoading ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          'Add'
-                        )}
-                      </Button>
-                    </div>
-                    {customVoiceError && (
-                      <p className="text-xs text-red-500 mt-1">{customVoiceError}</p>
-                    )}
-                  </div>
-                </div>
+                      );
+                    })}
 
-                {/* Right column: Text content */}
-                <div className="flex-1 border border-gray-200 rounded-lg p-6 max-h-[500px] overflow-y-auto">
-                  <input
-                    type="text"
-                    defaultValue={previewData?.title || "Untitled"}
-                    className="text-lg font-semibold text-gray-900 mb-4 w-full bg-transparent border-none focus:outline-none focus:ring-0"
-                  />
-                  <div className="space-y-3">
-                    {textSegments.map((segment) => {
+                    {/* Custom Voice ID Section */}
+                    <div className="pt-3 border-t border-gray-200 mt-3">
+                      <p className="text-xs font-medium text-gray-700 mb-2">
+                        <a 
+                          href="https://elevenlabs.io/app/voice-library" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
+                          Use another ElevenLabs voice
+                        </a>
+                      </p>
+                      <p className="text-[10px] text-gray-400 mb-1">
+                        Add voice to VoiceLab first, then paste ID
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Paste voice ID from VoiceLab"
+                          value={customVoiceId}
+                          onChange={(e) => {
+                            setCustomVoiceId(e.target.value);
+                            setCustomVoiceError(null);
+                          }}
+                          className="h-8 text-xs"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              loadCustomVoice();
+                            }
+                          }}
+                        />
+                        <Button
+                          onClick={loadCustomVoice}
+                          disabled={!customVoiceId.trim() || customVoiceLoading}
+                          size="sm"
+                          className="h-8 px-3"
+                        >
+                          {customVoiceLoading ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            'Add'
+                          )}
+                        </Button>
+                      </div>
+                      {customVoiceError && (
+                        <p className="text-xs text-red-500 mt-1">{customVoiceError}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right column: Text content */}
+                  <div className="flex-1 border border-gray-200 rounded-lg p-6 max-h-[500px] overflow-y-auto bg-white">
+                    <div className="space-y-3">
+                      {textSegments.map((segment) => {
                       const voice = voiceOptions.find(v => v.id === segment.voiceId);
                       const hasVoice = !!voice;
                       return (
@@ -870,129 +1017,52 @@ export function ConversionFlow() {
             </div>
           )}
 
-          {/* Step 3: Generate */}
-          {currentStep === "generate" && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                  Generate audio
-                </h2>
-                <p className="text-gray-600">
-                  Preview your audio before publishing
-                </p>
-              </div>
+            {/* Step 3: Generate */}
+            {currentStep === "generate" && (
+              <div className="space-y-6">
+                <div className="text-center mb-8">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    Generate audio
+                  </h2>
+                </div>
 
               {!isGenerating && generationProgress === 0 ? (
                 <div className="text-center py-8">
-                  {!showPayment ? (
-                    <>
-                      <div className="mb-6 p-4 bg-gray-50 rounded-lg inline-block">
-                        <div className="text-sm text-gray-500 mb-1">Total cost</div>
-                        <div className="text-2xl font-semibold text-gray-900">
-                          ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
-                        </div>
-                      </div>
-                      <div>
-                        <Button 
-                          onClick={() => setShowPayment(true)}
-                          size="lg"
-                          className="h-14 px-8 bg-gray-900 hover:bg-gray-800 text-white"
-                        >
-                          <CreditCard className="w-5 h-5 mr-2" />
-                          Pay & Generate
-                        </Button>
-                      </div>
-                      <p className="mt-4 text-sm text-gray-500">
-                        Estimated time: ~30 seconds
-                      </p>
-                      <button
-                        onClick={() => setCurrentStep("review")}
-                        className="mt-6 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                      >
-                        ← Back to Review
-                      </button>
-                    </>
-                  ) : (
-                    <div className="max-w-sm mx-auto">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Payment Details</h3>
-                        <button 
-                          onClick={() => setShowPayment(false)}
-                          className="text-gray-400 hover:text-gray-600"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                      
-                      <div className="space-y-4 text-left">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Card Number
-                          </label>
-                          <Input 
-                            placeholder="4242 4242 4242 4242"
-                            className="h-11"
-                          />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Expiry
-                            </label>
-                            <Input 
-                              placeholder="MM / YY"
-                              className="h-11"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              CVC
-                            </label>
-                            <Input 
-                              placeholder="123"
-                              className="h-11"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-100">
-                          <div className="flex justify-between text-sm mb-4">
-                            <span className="text-gray-500">Total</span>
-                            <span className="font-semibold text-gray-900">
-                              ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
-                            </span>
-                          </div>
-                          
-                          <Button 
-                            onClick={async () => {
-                              setPaymentProcessing(true);
-                              await new Promise(r => setTimeout(r, 1500));
-                              setPaymentProcessing(false);
-                              setShowPayment(false);
-                              handleGenerate();
-                            }}
-                            disabled={paymentProcessing}
-                            className="w-full h-12 bg-gray-900 hover:bg-gray-800 text-white"
-                          >
-                            {paymentProcessing ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Lock className="w-4 h-4 mr-2" />
-                                Pay ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
-                              </>
-                            )}
-                          </Button>
-                          
-                          <p className="mt-3 text-xs text-gray-400 text-center flex items-center justify-center gap-1">
-                            <Lock className="w-3 h-3" />
-                            Secured by Stripe
-                          </p>
-                        </div>
-                      </div>
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg inline-block">
+                    <div className="text-sm text-gray-500 mb-1">Total cost</div>
+                    <div className="text-2xl font-semibold text-gray-900">
+                      ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                     </div>
-                  )}
+                  </div>
+                    <div>
+                      <Button 
+                        onClick={handlePayment}
+                        disabled={paymentProcessing}
+                        size="lg"
+                        className="h-14 px-8 bg-gray-900 hover:bg-gray-800 text-white"
+                      >
+                        {paymentProcessing ? (
+                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        ) : (
+                          <CreditCard className="w-5 h-5 mr-2" />
+                        )}
+                        {paymentProcessing ? "Processing..." : "Pay & Generate"}
+                      </Button>
+                      {(isTestMode || (typeof window !== 'undefined' && localStorage.getItem('is_test_mode') === 'true')) && (
+                        <div className="mt-2 text-[10px] font-bold text-amber-600 tracking-wider uppercase">
+                          Stripe Test Mode Active
+                        </div>
+                      )}
+                    </div>
+                  <p className="mt-4 text-sm text-gray-500">
+                    Estimated time: ~30 seconds
+                  </p>
+                  <button
+                    onClick={() => setCurrentStep("review")}
+                    className="mt-6 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                  >
+                    ← Back to Review
+                  </button>
                 </div>
               ) : isGenerating ? (
                 <div className="space-y-6 py-8">
@@ -1008,12 +1078,12 @@ export function ConversionFlow() {
                       />
                     ))}
                   </div>
-                  <div className="space-y-2">
-                    <Progress value={generationProgress} className="h-2" />
-                    <p className="text-center text-sm text-gray-600">
-                      Generating audio... {generationProgress}%
-                    </p>
-                  </div>
+                    <div className="space-y-2">
+                      <Progress value={generationProgress} className="h-2" />
+                      <p className="text-center text-sm text-gray-600">
+                        Generating audio... {Math.round(generationProgress)}%
+                      </p>
+                    </div>
                 </div>
               ) : generationError ? (
                 <div className="space-y-4 py-8 text-center">
@@ -1051,11 +1121,17 @@ export function ConversionFlow() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-500">0:00</span>
-                    <div className="flex-1 h-1 bg-gray-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-gray-900 w-0" />
-                    </div>
-                    <span className="text-sm text-gray-500">8:24</span>
+                    <span className="text-sm text-gray-500 min-w-[40px]">{formatTime(audioCurrentTime)}</span>
+                    <input 
+                      type="range"
+                      min="0"
+                      max={audioDuration || 0}
+                      step="0.1"
+                      value={audioCurrentTime}
+                      onChange={(e) => handleScrub(Number(e.target.value))}
+                      className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer accent-gray-900"
+                    />
+                    <span className="text-sm text-gray-500 min-w-[40px] text-right">{formatTime(audioDuration)}</span>
                   </div>
 
                   <div className="flex gap-3 pt-4">
@@ -1105,43 +1181,55 @@ export function ConversionFlow() {
                       className="w-full h-40 object-cover"
                     />
                   ) : (
-                    <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                      <Mic className="w-12 h-12 text-gray-300" />
-                    </div>
-                  )}
-                  {/* Play button overlay */}
-                  <button
-                    onClick={() => setIsPlaying(!isPlaying)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
-                  >
-                    <div className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center">
-                      {isPlaying ? (
-                        <Pause className="w-6 h-6 text-gray-900" />
-                      ) : (
-                        <Play className="w-6 h-6 text-gray-900 ml-1" />
-                      )}
-                    </div>
-                  </button>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-1">{previewData?.title || "Untitled"}</h3>
-                  <p className="text-sm text-gray-500">
-                    {formatTime(audioDuration)} • {previewData?.author || "Unknown"}
-                  </p>
-                  {/* Mini progress bar */}
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-xs text-gray-400">{formatTime(audioCurrentTime)}</span>
-                    <div className="flex-1 h-1 bg-gray-200 rounded-full">
-                      <div 
-                        className="h-full bg-gray-900 rounded-full transition-all duration-100" 
-                        style={{ width: `${(audioCurrentTime / audioDuration) * 100 || 0}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {formatTime(audioDuration)}
-                    </span>
+                      <div className="w-full h-40 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8 flex items-center justify-center text-center relative overflow-hidden">
+                        {/* Decorative background elements */}
+                        <div className="absolute top-0 left-0 w-full h-full opacity-20">
+                          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500 rounded-full blur-3xl animate-pulse" />
+                          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full blur-3xl animate-pulse delay-700" />
+                        </div>
+                        <h3 className="text-white font-bold text-xl leading-tight line-clamp-3 drop-shadow-lg z-10">
+                          {previewData?.title || "Untitled Article"}
+                        </h3>
+                      </div>
+                    )}
+                    {/* Play button overlay */}
+                    <button
+                      onClick={() => setIsPlaying(!isPlaying)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center">
+                        {isPlaying ? (
+                          <Pause className="w-6 h-6 text-gray-900" />
+                        ) : (
+                          <Play className="w-6 h-6 text-gray-900 ml-1" />
+                        )}
+                      </div>
+                    </button>
                   </div>
-                </div>
+                  <div className="p-4 bg-white">
+                    <h3 className="font-semibold text-gray-900 mb-1 truncate">
+                      {previewData?.title || "Untitled Article"}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {formatTime(audioDuration)} • {previewData?.author || "Unknown Author"}
+                    </p>
+                    {/* Mini progress bar */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-xs text-gray-400 min-w-[35px]">{formatTime(audioCurrentTime)}</span>
+                      <input 
+                        type="range"
+                        min="0"
+                        max={audioDuration || 0}
+                        step="0.1"
+                        value={audioCurrentTime}
+                        onChange={(e) => handleScrub(Number(e.target.value))}
+                        className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer accent-gray-900"
+                      />
+                      <span className="text-xs text-gray-400 min-w-[35px] text-right">
+                        {formatTime(audioDuration)}
+                      </span>
+                    </div>
+                  </div>
               </div>
                 
               <div className="flex flex-col gap-3 max-w-sm mx-auto pt-4">
@@ -1165,7 +1253,16 @@ export function ConversionFlow() {
                     setUrl("");
                     setGenerationProgress(0);
                     setPreviewData(null);
-                    setShowPayment(false);
+                    localStorage.removeItem('pending_preview');
+                    localStorage.removeItem('pending_segments');
+                    localStorage.removeItem('pending_step');
+                    localStorage.removeItem('last_title');
+                    localStorage.removeItem('last_author');
+                    localStorage.removeItem('last_image');
+                    localStorage.removeItem('last_platform');
+                    localStorage.removeItem('last_url');
+                    localStorage.removeItem('last_word_count');
+                    localStorage.removeItem('last_reading_time');
                   }}
                   className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
@@ -1174,8 +1271,9 @@ export function ConversionFlow() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
     </div>
   );
 }

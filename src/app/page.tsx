@@ -2,6 +2,7 @@
 
 import { ConversionFlow } from "@/components/conversion-flow";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface FloatingShape {
   id: number;
@@ -79,10 +80,18 @@ function generateShapes(count: number): FloatingShape[] {
 
 export default function Home() {
   const [shapes, setShapes] = useState<FloatingShape[]>([]);
+  const [resetKey, setResetKey] = useState(0);
 
   useEffect(() => {
     setShapes(generateShapes(12));
   }, []);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setResetKey(prev => prev + 1);
+    // Also update URL without refresh if needed, but for MVP just reset state
+    window.history.pushState({}, '', '/');
+  };
 
   return (
     <main className="min-h-screen bg-white relative overflow-hidden">
@@ -120,9 +129,13 @@ export default function Home() {
         {/* Header */}
         <header className="py-6 px-8 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <div className="font-semibold text-lg">
+            <a 
+              href="/" 
+              onClick={handleLogoClick}
+              className="font-semibold text-lg hover:opacity-70 transition-opacity"
+            >
               anoncast
-            </div>
+            </a>
           </div>
         </header>
 
@@ -140,7 +153,7 @@ export default function Home() {
 
         {/* Conversion Flow */}
         <section className="px-8 pb-24">
-          <ConversionFlow />
+          <ConversionFlow key={resetKey} />
         </section>
 
         {/* Footer */}
