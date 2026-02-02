@@ -1009,24 +1009,31 @@ export function ConversionFlow() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setCurrentStep("input");
-                  }}
-                  className="flex-1 h-12 border-gray-200 text-gray-700 hover:bg-gray-50"
-                >
-                  Back
-                </Button>
-                <Button 
-                  onClick={() => setCurrentStep("generate")}
-                  disabled={textSegments.filter(s => s.confirmed && s.voiceId).length === 0}
-                  className="flex-1 h-12 bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400"
-                >
-                  Generate Audio
-                  <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+              <div className="flex flex-col gap-3 pt-2">
+                {textSegments.filter(s => s.confirmed && s.voiceId).length === 0 && (
+                  <p className="text-xs text-center text-amber-600 font-medium animate-pulse">
+                    Please assign a voice to at least one paragraph to continue
+                  </p>
+                )}
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setCurrentStep("input");
+                    }}
+                    className="flex-1 h-12 border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={() => setCurrentStep("generate")}
+                    disabled={textSegments.filter(s => s.confirmed && s.voiceId).length === 0}
+                    className="flex-1 h-12 bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Generate Audio
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
