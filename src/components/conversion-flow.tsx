@@ -925,7 +925,7 @@ export function ConversionFlow() {
                               if (activeVoice && activeVoice !== segment.voiceId) {
                                 setTextSegments(segments =>
                                   segments.map(s =>
-                                    s.id === segment.id ? { ...s, voiceId: activeVoice, confirmed: false } : s
+                                    s.id === segment.id ? { ...s, voiceId: activeVoice, confirmed: true } : s
                                   )
                                 );
                               }
@@ -1021,7 +1021,8 @@ export function ConversionFlow() {
                 </Button>
                 <Button 
                   onClick={() => setCurrentStep("generate")}
-                  className="flex-1 h-12 bg-gray-900 hover:bg-gray-800 text-white"
+                  disabled={textSegments.filter(s => s.confirmed && s.voiceId).length === 0}
+                  className="flex-1 h-12 bg-gray-900 hover:bg-gray-800 text-white disabled:bg-gray-200 disabled:text-gray-400"
                 >
                   Generate Audio
                   <ArrowRight className="w-4 h-4 ml-2" />
