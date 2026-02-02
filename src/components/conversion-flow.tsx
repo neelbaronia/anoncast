@@ -104,6 +104,7 @@ export function ConversionFlow() {
   const [customVoiceLoading, setCustomVoiceLoading] = useState(false);
   const [customVoiceError, setCustomVoiceError] = useState<string | null>(null);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
+  const [showId, setShowId] = useState<string | null>("00000000-0000-0000-0000-000000000000");
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
@@ -137,6 +138,11 @@ export function ConversionFlow() {
 
     // 2. Check for existing preview data if not in a flow
     const lastTitle = localStorage.getItem('last_title');
+    const lastShowId = localStorage.getItem('last_show_id');
+    if (lastShowId) {
+      setShowId(lastShowId);
+    }
+    
     if (lastTitle && !previewData) {
       // Reconstruct basic preview data from fallback storage
       setPreviewData({
@@ -485,6 +491,13 @@ export function ConversionFlow() {
       const blob = await response.blob();
       const audioUrl = URL.createObjectURL(blob);
       setGeneratedAudioUrl(audioUrl);
+      
+      // Capture showId from headers for RSS feed
+      const newShowId = response.headers.get('X-Show-Id');
+      if (newShowId) {
+        setShowId(newShowId);
+        localStorage.setItem('last_show_id', newShowId);
+      }
       
       // Complete progress rapidly once file is ready
       clearInterval(progressInterval);
@@ -1232,16 +1245,44 @@ export function ConversionFlow() {
                   </div>
               </div>
                 
-              <div className="flex flex-col gap-3 max-w-sm mx-auto pt-4">
-                <Button className="h-12 bg-gray-900 hover:bg-gray-800 text-white">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Add to RSS Feed
-                </Button>
+              <div className="flex flex-col gap-3 max-w-md mx-auto pt-4">
+                {showId && (
+                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your RSS Feed</span>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Live</Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        readOnly 
+                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/feed/${showId}`}
+                        className="h-9 text-xs bg-white border-gray-200"
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="secondary"
+                        className="h-9 px-3"
+                        onClick={() => {
+                          const url = `${window.location.origin}/api/feed/${showId}`;
+                          navigator.clipboard.writeText(url);
+                          // Could add a toast here
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 text-center">
+                      Submit this URL to Spotify for Podcasters or Apple Podcasts
+                    </p>
+                  </div>
+                )}
+                
                 <Button 
                   variant="outline" 
                   onClick={handleExportAudio}
                   className="h-12 border-gray-200 text-gray-700 hover:bg-gray-50"
                 >
+                  <Share2 className="w-4 h-4 mr-2" />
                   Export Audio
                 </Button>
               </div>

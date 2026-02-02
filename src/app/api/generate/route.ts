@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSpeech } from '@/lib/elevenlabs';
 import NodeID3 from 'node-id3';
+import { uploadToR2 } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,12 +96,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Return the combined audio as a stream
-    return new Response(finalBuffer, {
+    // 3. Persist to Storage and Database
+    let audioUrl = '';
+    const GLOBAL_SHOW_ID = '00000000-0000-0000-0000-000000000000';
+
+    try {
+      const fileName = `${uuidv4()}.mp3`;
+      audioUrl = await uploadToR2(finalBuffer, fileName);
+
+      // Add episode to the global show
+      const { error: episodeError } = await supabase
+        .from('episodes')
+        .insert({
+          show_id: GLOBAL_SHOW_ID,
+          title: metadata?.title || 'Untitled Episode',
+          description: `Podcast version of the blog post: ${metadata?.url || 'Unknown source'}`,
+          audio_url: audioUrl,
+          duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
+        });
+
+      if (episodeError) throw episodeError;
+    } catch (persistError) {
+      console.error('Failed to persist to R2/Supabase:', persistError);
+    }
+
+    // Return audio with the global show ID
+    return new Response(new Uint8Array(finalBuffer), {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': finalBuffer.length.toString(),
         'Content-Disposition': `attachment; filename="podcast.mp3"`,
+        'X-Audio-URL': audioUrl,
+        'X-Show-Id': GLOBAL_SHOW_ID,
       },
     });
   } catch (error) {
