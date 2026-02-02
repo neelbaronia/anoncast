@@ -19,26 +19,26 @@ A web platform that allows bloggers to convert their written content into audio 
 > **Last updated:** Jan 31, 2026
 
 ### Next Tasks
-- [ ] **RSS Hosting & Feed Generation**
-  - Implement permanent audio storage (Cloudflare R2)
-  - Generate valid RSS 2.0 podcast feed
-- [ ] **Production Stripe API Migration**
-  - Switch back to live keys and production environment
+- [ ] **Vercel Deployment & Production Migration**
+  - Deploy Next.js app to Vercel
+  - Configure production domain (Namecheap)
+  - Switch Stripe to production (live) keys
 - [ ] **Dynamic Scraping Upgrade**
   - Integrate Puppeteer/Playwright for Notion/Substack support
-- [ ] **Podcast Distribution**
-  - Spotify/Apple Podcasts submission guide
 - [ ] **User Accounts & Storage**
   - Supabase Auth integration
 
 ### Completed
 - [x] Frontend prototype with conversion flow UI
 - [x] Voice assignment interface with color-coded paragraphs
-- [x] Stripe integration for pay-as-you-go generation
+- [x] Stripe integration (Sandbox/Test mode)
 - [x] ElevenLabs audio generation and concatenation
 - [x] Real-time audio playback and export
 - [x] Blog scraping for static sites (Cheerio)
 - [x] Custom ElevenLabs voice support (ID/Link parsing)
+- [x] Cloudflare R2 permanent audio storage
+- [x] Supabase metadata persistence
+- [x] RSS 2.0 dynamic feed generation (/api/feed/[showId])
 
 ---
 
