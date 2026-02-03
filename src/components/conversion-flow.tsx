@@ -463,6 +463,7 @@ export function ConversionFlow() {
       localStorage.setItem('last_url', scraped.url);
       localStorage.setItem('last_word_count', scraped.wordCount.toString());
       localStorage.setItem('last_reading_time', scraped.estimatedReadTime);
+      localStorage.setItem('last_first_sentence', scraped.paragraphs?.[0] ? getFirstSentence(scraped.paragraphs[0]) : '');
       
       // Initialize text segments from scraped paragraphs
       setTextSegments(
@@ -499,6 +500,7 @@ export function ConversionFlow() {
     localStorage.removeItem('last_url');
     localStorage.removeItem('last_word_count');
     localStorage.removeItem('last_reading_time');
+    localStorage.removeItem('last_first_sentence');
   };
 
   const handleGenerate = async (segmentsToUse = textSegments) => {
@@ -525,7 +527,9 @@ export function ConversionFlow() {
           metadata: {
             title: previewData?.title || localStorage.getItem('last_title'),
             author: previewData?.author || localStorage.getItem('last_author'),
-            image: previewData?.featuredImage || localStorage.getItem('last_image')
+            image: previewData?.featuredImage || localStorage.getItem('last_image'),
+            url: previewData?.url || localStorage.getItem('last_url'),
+            firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
           }
         }),
       });

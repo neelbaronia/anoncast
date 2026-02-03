@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         .insert({
           show_id: GLOBAL_SHOW_ID,
           title: metadata?.title || 'Untitled Episode',
-          description: `Podcast version of the blog post: ${metadata?.url || 'Unknown source'}`,
+          description: `${metadata?.firstSentence || ''}\n\nOriginal blog: ${metadata?.url || 'Unknown source'}\n\nMade with Anoncast: ${process.env.NEXT_PUBLIC_APP_URL || 'https://www.anoncast.net'}`,
           audio_url: audioUrl,
           duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
         });

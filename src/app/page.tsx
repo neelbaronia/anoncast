@@ -101,6 +101,7 @@ export default function Home() {
       'last_url',
       'last_word_count',
       'last_reading_time',
+      'last_first_sentence',
       'last_show_id'
     ];
     keysToRemove.forEach(key => localStorage.removeItem(key));
