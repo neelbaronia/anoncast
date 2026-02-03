@@ -157,15 +157,29 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-gray-100 py-8 px-8 bg-white/80 backdrop-blur-sm">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              © 2026 anoncast
-            </span>
-            <div className="flex items-center gap-6">
-              <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</a>
-              <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy</a>
-              <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Support</a>
+        <footer className="border-t border-gray-100 py-12 px-8 bg-white/80 backdrop-blur-sm">
+          <div className="max-w-5xl mx-auto flex flex-col items-center gap-8">
+            <a 
+              href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3 px-8 py-4 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full font-semibold transition-all shadow-lg hover:scale-105 active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.22.361-.692.472-1.053.252-2.903-1.774-6.558-2.176-10.865-1.192-.413.094-.827-.163-.921-.575-.094-.413.163-.827.575-.921 4.71-1.077 8.74-.623 12.012 1.381.361.22.472.692.252 1.055zm1.464-3.259c-.276.449-.863.593-1.313.317-3.32-2.039-8.381-2.634-12.308-1.442-.505.153-1.036-.134-1.189-.639-.153-.505.134-1.036.639-1.189 4.49-1.362 10.066-.704 13.854 1.624.449.276.593.863.317 1.329zm.126-3.414c-3.982-2.366-10.551-2.585-14.364-1.428-.611.186-1.258-.168-1.444-.779-.186-.611.168-1.258.779-1.444 4.385-1.33 11.625-1.078 16.195 1.636.55.326.732 1.033.406 1.583-.326.551-1.034.733-1.583.406h-.001z"/>
+              </svg>
+              Listen on Spotify
+            </a>
+            
+            <div className="w-full flex items-center justify-between border-t border-gray-100 pt-8">
+              <span className="text-sm text-gray-500">
+                © 2026 anoncast
+              </span>
+              <div className="flex items-center gap-6">
+                <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</a>
+                <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy</a>
+                <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Support</a>
+              </div>
             </div>
           </div>
         </footer>
