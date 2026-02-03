@@ -180,8 +180,18 @@ export default function Home() {
         <section className="px-8 pb-12">
           <ConversionFlow key={resetKey} />
           
-          {/* Floating Platform Links */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="mt-12 flex flex-col items-center">
+            {/* Show Image */}
+            <div className="mb-6 w-24 h-24 md:w-32 md:h-32 rounded-2xl overflow-hidden shadow-xl border-4 border-white animate-in fade-in zoom-in duration-1000">
+              <img 
+                src="https://anoncast.xyz/logo.png" 
+                alt="Anoncast Show Art" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Floating Platform Links */}
+            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
             <a 
               href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
               target="_blank" 
