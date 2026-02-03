@@ -1490,19 +1490,19 @@ export function ConversionFlow() {
                 <Button 
                   onClick={handleBuyDownload}
                   disabled={isBuyingDownload}
-                  className="h-11 bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm"
+                  className="h-11 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm"
                 >
                   {isBuyingDownload ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin text-gray-500" />
                   ) : (
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="w-4 h-4 mr-2 text-gray-500" />
                   )}
-                  Buy MP3 Download ($5)
+                  Download Raw MP3 File
                 </Button>
               </div>
 
               <div className="text-center pt-2">
-                <button
+                <Button
                   onClick={() => {
                     setCurrentStep("input");
                     setUrl("");
@@ -1519,10 +1519,10 @@ export function ConversionFlow() {
                     localStorage.removeItem('last_word_count');
                     localStorage.removeItem('last_reading_time');
                   }}
-                  className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                  className="h-11 px-8 bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm"
                 >
                   Convert another article
-                </button>
+                </Button>
               </div>
             </div>
           )}
