@@ -25,6 +25,8 @@ A web platform that allows bloggers to convert their written content into audio 
   - Switch Stripe to production (live) keys
 - [ ] **Dynamic Scraping Upgrade**
   - Integrate Puppeteer/Playwright for Notion/Substack support
+- [ ] **Search & Discovery**
+  - Implement search functionality for the Generated Episodes list
 - [ ] **User Accounts & Storage**
   - Supabase Auth integration
 
