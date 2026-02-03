@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Pause, ExternalLink, Calendar, Clock, User } from "lucide-react";
@@ -28,28 +27,14 @@ export default function GeneratedBlogsPage() {
   useEffect(() => {
     async function fetchEpisodes() {
       try {
-        const { data, error } = await supabase
-          .from('episodes')
-          .select(`
-            *,
-            shows (
-              title,
-              author,
-              image_url
-            )
-          `)
-          .order('published_at', { ascending: false });
+        const response = await fetch('/api/episodes');
+        const result = await response.json();
 
-        if (error) throw error;
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Failed to fetch');
+        }
 
-        const formattedEpisodes = data.map((ep: any) => ({
-          ...ep,
-          show_title: ep.shows?.title,
-          show_author: ep.shows?.author,
-          show_image: ep.shows?.image_url
-        }));
-
-        setEpisodes(formattedEpisodes);
+        setEpisodes(result.data);
       } catch (err) {
         console.error("Error fetching episodes:", err);
       } finally {
