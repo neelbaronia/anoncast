@@ -1172,7 +1172,13 @@ export function ConversionFlow() {
             {/* Step 3: Generate */}
             {currentStep === "generate" && (
               <div className="space-y-6">
-                {/* Persistent Preview Card at top of Generate step */}
+                <div className="text-center mb-8">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                    Generate audio
+                  </h2>
+                </div>
+
+                {/* Persistent Preview Card below title */}
                 {previewData && (
                   <Card 
                     className="border border-gray-200 shadow-sm overflow-hidden mb-8"
@@ -1181,7 +1187,7 @@ export function ConversionFlow() {
                     }}
                   >
                     <div className="p-6">
-                      <div className="flex gap-6">
+                      <div className="flex gap-6 text-left">
                         {previewData.featuredImage ? (
                           <img 
                             src={previewData.featuredImage} 
@@ -1216,21 +1222,17 @@ export function ConversionFlow() {
                     </div>
                   </Card>
                 )}
-                <div className="text-center mb-8">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                    Generate audio
-                  </h2>
-                </div>
 
               {!isGenerating && generationProgress === 0 ? (
                 <div className="text-center py-8">
-                  <div className="mb-6 p-4 bg-gray-50 rounded-lg inline-block">
-                    <div className="text-sm text-gray-500 mb-1">Total cost</div>
-                    <div className="text-2xl font-semibold text-gray-900">
-                      ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
+                  <div className="flex items-center justify-center gap-6 mb-8">
+                    <div className="p-4 bg-gray-50 rounded-lg text-left">
+                      <div className="text-sm text-gray-500 mb-1">Total cost</div>
+                      <div className="text-2xl font-semibold text-gray-900">
+                        ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
+                      </div>
                     </div>
-                  </div>
-                    <div>
+                    <div className="flex flex-col items-center">
                       <Button 
                         onClick={handlePayment}
                         disabled={paymentProcessing}
@@ -1250,6 +1252,7 @@ export function ConversionFlow() {
                         </div>
                       )}
                     </div>
+                  </div>
                   <p className="mt-4 text-sm text-gray-500">
                     Estimated time: ~30 seconds
                   </p>
