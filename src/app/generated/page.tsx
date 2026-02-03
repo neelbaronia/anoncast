@@ -251,20 +251,19 @@ export default function GeneratedBlogsPage() {
       </header>
 
       <div className="max-w-5xl mx-auto px-8 py-12">
-        <div className="flex flex-col items-center mb-12">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12 animate-in fade-in slide-in-from-top-4 duration-1000">
           {/* Show Image */}
-          <div className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000">
+          <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden shadow-xl border-4 border-white flex-shrink-0">
             <img 
               src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png" 
               alt="Anoncast Show Art" 
               className="w-full h-full object-cover"
             />
           </div>
-        </div>
-
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Generated Episodes</h1>
-          <p className="text-gray-600">Explore all the blogs and essays that have been converted to podcasts.</p>
+          <div className="text-center md:text-left">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Generated Episodes</h1>
+            <p className="text-lg text-gray-600">Explore all the blogs and essays that have been converted to podcasts.</p>
+          </div>
         </div>
 
         {loading ? (

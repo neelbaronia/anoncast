@@ -41,6 +41,7 @@ A web platform that allows bloggers to convert their written content into audio 
 - [x] Cloudflare R2 permanent audio storage
 - [x] Supabase metadata persistence
 - [x] RSS 2.0 dynamic feed generation (/api/feed/[showId])
+- [x] Redesigned Generated Episodes header with top-aligned show art and title
 
 ---
 
