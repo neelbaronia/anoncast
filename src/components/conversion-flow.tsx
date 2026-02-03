@@ -128,8 +128,8 @@ export function ConversionFlow() {
         if (ctx) {
           ctx.drawImage(img, 0, 0, 1, 1);
           const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-          // Create a very light version (95% white) for the background
-          setSampledColor(`rgba(${r}, ${g}, ${b}, 0.08)`);
+          // Apply a very subtle tint of the image color over a warm pastel base
+          setSampledColor(`rgba(${r}, ${g}, ${b}, 0.04)`);
         }
       };
       img.onerror = () => setSampledColor(null);
@@ -709,7 +709,10 @@ export function ConversionFlow() {
                 {previewData && (
                   <Card 
                     className="border border-gray-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500 transition-colors"
-                    style={{ backgroundColor: sampledColor || 'white' }}
+                    style={{ 
+                      backgroundColor: '#fff9f5', // Hardcoded warm pastel base
+                      backgroundImage: sampledColor ? `linear-gradient(${sampledColor}, ${sampledColor})` : 'none' 
+                    }}
                   >
                     <div className="p-6">
                       <div className="flex gap-6">
@@ -785,7 +788,10 @@ export function ConversionFlow() {
                 {previewData && (
                   <Card 
                     className="border border-gray-200 shadow-sm overflow-hidden mb-8 transition-colors"
-                    style={{ backgroundColor: sampledColor || 'white' }}
+                    style={{ 
+                      backgroundColor: '#fff9f5', // Hardcoded warm pastel base
+                      backgroundImage: sampledColor ? `linear-gradient(${sampledColor}, ${sampledColor})` : 'none'
+                    }}
                   >
                     <div className="p-6">
                       <div className="flex gap-6">
