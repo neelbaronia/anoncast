@@ -152,6 +152,14 @@ export default function Home() {
             >
               anoncast
             </a>
+            <nav>
+              <Link 
+                href="/generated" 
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Generated Blogs
+              </Link>
+            </nav>
           </div>
         </header>
 
