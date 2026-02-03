@@ -107,77 +107,76 @@ export default function GeneratedBlogsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-12 max-w-2xl mx-auto">
+          <div className="space-y-4 max-w-3xl mx-auto">
             {episodes.map((episode) => (
-              <div key={episode.id} className="group border-b border-gray-100 pb-12 last:border-0">
-                <div className="relative rounded-2xl overflow-hidden bg-gray-100 shadow-sm mb-6">
+              <div 
+                key={episode.id} 
+                className="group bg-white border border-gray-100 rounded-xl p-4 flex gap-6 hover:shadow-md transition-all items-center"
+              >
+                {/* Compact Image/Play Section */}
+                <div className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
                   {episode.show_image ? (
                     <img 
                       src={episode.show_image} 
                       alt={episode.title}
-                      className="w-full h-auto block"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full aspect-video flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-12">
-                      <h3 className="text-white font-bold text-2xl text-center">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-2">
+                      <span className="text-white font-bold text-[10px] text-center line-clamp-2">
                         {episode.title}
-                      </h3>
+                      </span>
                     </div>
                   )}
                   <button 
                     onClick={() => togglePlay(episode)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/5 group-hover:bg-black/20 transition-colors"
+                    className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/30 transition-colors"
                   >
-                    <div className="w-20 h-20 rounded-full bg-white/90 backdrop-blur shadow-2xl flex items-center justify-center transform transition-transform group-hover:scale-110">
+                    <div className="w-10 h-10 rounded-full bg-white/90 backdrop-blur shadow-lg flex items-center justify-center transform transition-transform group-hover:scale-110">
                       {playingId === episode.id ? (
-                        <Pause className="w-8 h-8 text-gray-900" />
+                        <Pause className="w-4 h-4 text-gray-900" />
                       ) : (
-                        <Play className="w-8 h-8 text-gray-900 ml-1" />
+                        <Play className="w-4 h-4 text-gray-900 ml-0.5" />
                       )}
                     </div>
                   </button>
                 </div>
                 
-                <div className="px-2">
-                  <div className="flex items-center gap-3 text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                {/* Content Section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
                     <span>{formatDate(episode.published_at)}</span>
                     <span>•</span>
                     <span>{formatDuration(episode.duration)}</span>
                   </div>
                   
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3 leading-tight group-hover:text-blue-600 transition-colors">
+                  <h2 className="text-lg font-bold text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
                     {episode.title}
                   </h2>
                   
-                  <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
-                    {episode.description}
-                  </p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
+                      <User className="w-2 h-2 text-gray-500" />
+                    </div>
+                    <span className="text-xs text-gray-500 truncate">{episode.show_author || 'Anoncast'}</span>
+                  </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User className="w-3 h-3 text-gray-500" />
-                      </div>
-                      <span>{episode.show_author || 'Anoncast'}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-xs h-9 px-4 border-gray-200 rounded-full"
-                        asChild
-                      >
-                        <a href={episode.audio_url} download={`podcast-${episode.id}.mp3`}>
-                          Download
-                        </a>
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-[10px] h-7 px-3 border border-gray-100 rounded-full hover:bg-gray-50"
+                      asChild
+                    >
+                      <a href={episode.audio_url} download={`podcast-${episode.id}.mp3`}>
+                        Download
+                      </a>
+                    </Button>
+                    <Link href={`/api/feed/00000000-0000-0000-0000-000000000000`} target="_blank">
+                      <Button variant="ghost" size="sm" className="text-[10px] h-7 px-3 text-blue-500 hover:bg-blue-50 rounded-full font-bold">
+                        RSS Feed
                       </Button>
-                      <Link href={`/api/feed/00000000-0000-0000-0000-000000000000`} target="_blank">
-                        <Button variant="ghost" size="sm" className="text-xs h-9 px-4 text-blue-500 hover:bg-blue-50 rounded-full font-semibold">
-                          RSS Feed
-                        </Button>
-                      </Link>
-                    </div>
+                    </Link>
                   </div>
                 </div>
               </div>
