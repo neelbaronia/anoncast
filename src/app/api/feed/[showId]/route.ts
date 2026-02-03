@@ -60,6 +60,7 @@ export async function GET(
         .ele('guid', { isPermaLink: 'false' }).txt(episode.id).up()
         .ele('itunes:author').txt(show.author || 'Anoncast').up()
         .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
+        .ele('itunes:image', { href: episode.image_url || show.image_url || 'https://anoncast.xyz/logo.png' }).up()
         .ele('enclosure', {
           url: episode.audio_url,
           length: episode.file_size?.toString() || '0',
