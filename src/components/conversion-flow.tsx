@@ -111,32 +111,7 @@ export function ConversionFlow() {
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTestMode, setIsTestMode] = useState(false);
-  const [sampledColor, setSampledColor] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Sample color from image
-  useEffect(() => {
-    if (previewData?.featuredImage) {
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.src = previewData.featuredImage;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, 1, 1);
-          const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
-          // Apply a very subtle tint of the image color over a warm pastel base
-          setSampledColor(`rgba(${r}, ${g}, ${b}, 0.04)`);
-        }
-      };
-      img.onerror = () => setSampledColor(null);
-    } else {
-      setSampledColor(null);
-    }
-  }, [previewData?.featuredImage]);
 
   // Check for payment success or existing preview on mount
   useEffect(() => {
@@ -708,10 +683,9 @@ export function ConversionFlow() {
                 {/* Preview Card (Inside Input Step) */}
                 {previewData && (
                   <Card 
-                    className="border border-gray-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500 transition-colors"
+                    className="border border-gray-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500"
                     style={{ 
-                      backgroundColor: '#fff9f5', // Hardcoded warm pastel base
-                      backgroundImage: sampledColor ? `linear-gradient(${sampledColor}, ${sampledColor})` : 'none' 
+                      backgroundColor: '#f0f9ff', // Clean Sky Blue pastel
                     }}
                   >
                     <div className="p-6">
@@ -787,10 +761,9 @@ export function ConversionFlow() {
                 {/* Persistent Preview Card at top of Review/Generate steps */}
                 {previewData && (
                   <Card 
-                    className="border border-gray-200 shadow-sm overflow-hidden mb-8 transition-colors"
+                    className="border border-gray-200 shadow-sm overflow-hidden mb-8"
                     style={{ 
-                      backgroundColor: '#fff9f5', // Hardcoded warm pastel base
-                      backgroundImage: sampledColor ? `linear-gradient(${sampledColor}, ${sampledColor})` : 'none'
+                      backgroundColor: '#f0f9ff', // Clean Sky Blue pastel
                     }}
                   >
                     <div className="p-6">
