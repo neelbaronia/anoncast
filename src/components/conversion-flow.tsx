@@ -456,6 +456,13 @@ export function ConversionFlow() {
 
   const getCurrentStepIndex = () => steps.findIndex((s) => s.id === currentStep);
 
+  const handleMetadataChange = (field: 'title' | 'author', value: string) => {
+    if (!previewData) return;
+    const newData = { ...previewData, [field]: value };
+    setPreviewData(newData);
+    localStorage.setItem(`last_${field}`, value);
+  };
+
   const handleFetch = async () => {
     if (!url) return;
     setIsLoading(true);
@@ -731,18 +738,33 @@ export function ConversionFlow() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                            <h3 className="text-base font-semibold text-gray-900">
-                              {previewData.title}
-                            </h3>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <div className="flex-1 min-w-[200px]">
+                              <input
+                                type="text"
+                                value={previewData.title}
+                                onChange={(e) => handleMetadataChange('title', e.target.value)}
+                                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-base font-semibold text-gray-900 p-0 placeholder:text-gray-400"
+                                placeholder="Article Title"
+                              />
+                            </div>
                             {previewData.platform && (
                               <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-4">
                                 {previewData.platform}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-1">
-                            <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
+                            <div className="flex items-center">
+                              <span>By </span>
+                              <input
+                                type="text"
+                                value={previewData.author}
+                                onChange={(e) => handleMetadataChange('author', e.target.value)}
+                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
+                                placeholder="Author Name"
+                              />
+                            </div>
                             <span>•</span>
                             <span>{previewData.wordCount} words</span>
                             <span>•</span>
@@ -809,18 +831,33 @@ export function ConversionFlow() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                            <h3 className="text-base font-semibold text-gray-900">
-                              {previewData.title}
-                            </h3>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <div className="flex-1 min-w-[200px]">
+                              <input
+                                type="text"
+                                value={previewData.title}
+                                onChange={(e) => handleMetadataChange('title', e.target.value)}
+                                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-base font-semibold text-gray-900 p-0 placeholder:text-gray-400"
+                                placeholder="Article Title"
+                              />
+                            </div>
                             {previewData.platform && (
                               <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-4">
                                 {previewData.platform}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
-                            <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                            <div className="flex items-center">
+                              <span>By </span>
+                              <input
+                                type="text"
+                                value={previewData.author}
+                                onChange={(e) => handleMetadataChange('author', e.target.value)}
+                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
+                                placeholder="Author Name"
+                              />
+                            </div>
                             <span>•</span>
                             <span>{previewData.wordCount} words</span>
                             <span>•</span>
@@ -1200,18 +1237,33 @@ export function ConversionFlow() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <h3 className="text-base font-semibold text-gray-900">
-                              {previewData.title}
-                            </h3>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <div className="flex-1 min-w-[200px]">
+                              <input
+                                type="text"
+                                value={previewData.title}
+                                onChange={(e) => handleMetadataChange('title', e.target.value)}
+                                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-base font-semibold text-gray-900 p-0 placeholder:text-gray-400"
+                                placeholder="Article Title"
+                              />
+                            </div>
                             {previewData.platform && (
                               <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-4">
                                 {previewData.platform}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
-                            <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                            <div className="flex items-center">
+                              <span>By </span>
+                              <input
+                                type="text"
+                                value={previewData.author}
+                                onChange={(e) => handleMetadataChange('author', e.target.value)}
+                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
+                                placeholder="Author Name"
+                              />
+                            </div>
                             <span>•</span>
                             <span>{previewData.wordCount} words</span>
                             <span>•</span>

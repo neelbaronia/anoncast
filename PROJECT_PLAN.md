@@ -31,6 +31,7 @@ A web platform that allows bloggers to convert their written content into audio 
   - Supabase Auth integration
 
 ### Completed
+- [x] Manual editing of title and author in the Review step
 - [x] Frontend prototype with conversion flow UI
 - [x] Voice assignment interface with color-coded paragraphs
 - [x] Stripe integration (Sandbox/Test mode)
