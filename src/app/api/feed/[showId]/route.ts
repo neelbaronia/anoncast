@@ -62,7 +62,7 @@ export async function GET(
         .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
         .ele('enclosure', {
           url: episode.audio_url,
-          length: '0', // We don't have file size easily available here
+          length: episode.file_size?.toString() || '0',
           type: 'audio/mpeg'
         }).up()
       item.up();
