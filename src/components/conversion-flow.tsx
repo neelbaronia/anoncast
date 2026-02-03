@@ -1430,6 +1430,30 @@ export function ConversionFlow() {
                     </div>
                   </div>
               </div>
+
+              {/* Platform Links */}
+              <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
+                <a 
+                  href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 h-10 px-4 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-xl text-[11px] font-bold transition-all shadow-sm active:scale-95"
+                >
+                  <img src="https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Icon_RGB_White.png" alt="" className="w-4 h-4" />
+                  Listen on Spotify
+                </a>
+                <a 
+                  href="#" 
+                  className="flex items-center justify-center gap-2 h-10 px-4 bg-[#872ec4] hover:bg-[#9b3fe3] text-white rounded-xl text-[11px] font-bold transition-all shadow-sm active:scale-95"
+                >
+                  <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center p-0.5">
+                    <svg viewBox="0 0 24 24" className="w-full h-full fill-[#872ec4]">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"/>
+                    </svg>
+                  </div>
+                  Apple Podcasts
+                </a>
+              </div>
                 
               <div className="flex flex-col gap-2 max-w-md mx-auto pt-2">
                 {showId && (
