@@ -15,7 +15,7 @@ interface Episode {
   published_at: string;
   show_title?: string;
   show_author?: string;
-  show_image?: string;
+  display_image?: string;
 }
 
 export default function GeneratedBlogsPage() {
@@ -163,9 +163,9 @@ export default function GeneratedBlogsPage() {
               >
                 {/* Compact Image/Play Section */}
                 <div className="relative w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 shadow-sm">
-                  {episode.show_image ? (
+                  {episode.display_image ? (
                     <img 
-                      src={episode.show_image} 
+                      src={episode.display_image} 
                       alt={episode.title}
                       className="w-full h-full object-cover"
                     />
@@ -264,8 +264,8 @@ export default function GeneratedBlogsPage() {
           <Card className="shadow-2xl border-gray-200 bg-white/95 backdrop-blur-md">
             <CardContent className="p-3 flex items-center gap-4">
               <div className="w-10 h-10 rounded bg-gray-900 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                {episodes.find(e => e.id === playingId)?.show_image ? (
-                  <img src={episodes.find(e => e.id === playingId)?.show_image} alt="" className="w-full h-full object-cover" />
+                {episodes.find(e => e.id === playingId)?.display_image ? (
+                  <img src={episodes.find(e => e.id === playingId)?.display_image} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Play className="w-4 h-4 text-white" />
                 )}

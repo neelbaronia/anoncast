@@ -24,7 +24,7 @@ export async function GET() {
       ...ep,
       show_title: ep.shows?.title,
       show_author: ep.shows?.author,
-      show_image: ep.shows?.image_url
+      display_image: ep.image_url || ep.shows?.image_url // Prioritize episode image
     }));
 
     return NextResponse.json({ success: true, data: formattedEpisodes });
