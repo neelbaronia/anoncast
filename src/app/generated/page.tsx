@@ -120,6 +120,11 @@ export default function GeneratedBlogsPage() {
     });
   };
 
+  const getSourceUrl = (description: string) => {
+    const match = description.match(/Original blog: (https?:\/\/[^\s\n]+)/);
+    return match ? match[1] : null;
+  };
+
   return (
     <main className="min-h-screen bg-gray-50/50">
       {/* Header */}
@@ -207,6 +212,19 @@ export default function GeneratedBlogsPage() {
                       <User className="w-2 h-2 text-gray-500" />
                     </div>
                     <span className="text-xs text-gray-500 truncate">{episode.show_author || 'Anoncast'}</span>
+                    {getSourceUrl(episode.description) && (
+                      <>
+                        <span className="text-gray-300 text-xs">•</span>
+                        <a 
+                          href={getSourceUrl(episode.description)!} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                        >
+                          View Original <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between gap-3">
