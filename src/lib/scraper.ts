@@ -43,11 +43,12 @@ const mediumScraper: PlatformScraper = {
     
     // Try multiple selectors for Medium content
     const selectors = [
-      'article p', 'article h2', 'article h3', 'article blockquote',
+      'article p', 'article h2', 'article h3', 'article h4', 'article blockquote',
       'section p', 'section h2', 'section h3',
       '.post-content p', '.post-content h2', '.post-content h3',
       '[data-testid="postContent"] p', '[data-testid="postContent"] h2', '[data-testid="postContent"] h3',
-      'p.pw-post-body-paragraph'
+      'p.pw-post-body-paragraph',
+      '.graf--p', '.graf--h3', '.graf--h4', '.graf--blockquote'
     ];
     
     $(selectors.join(', ')).each((_, el) => {
@@ -242,15 +243,18 @@ const genericScraper: PlatformScraper = {
     
     // Try to find the main content area
     const mainContent = $('article').length ? $('article') :
+                        $('[role="main"]').length ? $('[role="main"]') :
                         $('main').length ? $('main') :
+                        $('#content').length ? $('#content') :
                         $('.content').length ? $('.content') :
                         $('[class*="post"]').first().length ? $('[class*="post"]').first() :
+                        $('[class*="article"]').first().length ? $('[class*="article"]').first() :
                         $('body');
     
     // First try standard paragraph tags
-    mainContent.find('p, h2, h3, h4, blockquote, section, div[class*="content"], div[class*="text"], div[class*="body"]').each((_, el) => {
-      // Don't grab text from nested containers that we'll process anyway
-      if ($(el).find('p, h2, h3, h4').length > 0 && !['P', 'H2', 'H3', 'H4'].includes(el.tagName.toUpperCase())) {
+    mainContent.find('p, h2, h3, h4, blockquote, section, article').each((_, el) => {
+      // Don't grab text from containers if they have children we will process
+      if (['SECTION', 'ARTICLE', 'DIV'].includes(el.tagName.toUpperCase()) && $(el).find('p, h2, h3, h4').length > 0) {
         return;
       }
 

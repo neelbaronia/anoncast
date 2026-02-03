@@ -171,6 +171,9 @@ export function ConversionFlow() {
     
     if (lastTitle && !previewData) {
       // Reconstruct basic preview data from fallback storage
+      const savedParagraphs = localStorage.getItem('last_paragraphs');
+      const paragraphs = savedParagraphs ? JSON.parse(savedParagraphs) : [];
+      
       setPreviewData({
         title: lastTitle,
         author: localStorage.getItem('last_author') || '',
@@ -179,10 +182,22 @@ export function ConversionFlow() {
         url: localStorage.getItem('last_url') || '',
         wordCount: parseInt(localStorage.getItem('last_word_count') || '0'),
         estimatedReadTime: localStorage.getItem('last_reading_time') || '',
-        paragraphs: [], // We don't store full paragraphs in fallback
+        paragraphs: paragraphs,
         content: '',
         publishDate: null
       });
+
+      // Also restore text segments if we have paragraphs
+      if (paragraphs.length > 0) {
+        setTextSegments(
+          paragraphs.map((text: string, i: number) => ({ 
+            id: i, 
+            text: text.trim(), 
+            voiceId: "", 
+            confirmed: false 
+          }))
+        );
+      }
     }
   }, []);
 
@@ -470,6 +485,7 @@ export function ConversionFlow() {
       localStorage.setItem('last_url', scraped.url);
       localStorage.setItem('last_word_count', scraped.wordCount.toString());
       localStorage.setItem('last_reading_time', scraped.estimatedReadTime);
+      localStorage.setItem('last_paragraphs', JSON.stringify(scraped.paragraphs));
       localStorage.setItem('last_first_sentence', scraped.paragraphs?.[0] ? getFirstSentence(scraped.paragraphs[0]) : '');
       localStorage.setItem('pending_segments', JSON.stringify(scraped.paragraphs.map((text, i) => ({ 
         id: i, 
@@ -514,6 +530,7 @@ export function ConversionFlow() {
     localStorage.removeItem('last_word_count');
     localStorage.removeItem('last_reading_time');
     localStorage.removeItem('last_first_sentence');
+    localStorage.removeItem('last_paragraphs');
   };
 
   const handleGenerate = async (segmentsToUse = textSegments) => {
