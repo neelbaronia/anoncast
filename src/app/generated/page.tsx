@@ -221,7 +221,7 @@ export default function GeneratedBlogsPage() {
                           rel="noopener noreferrer"
                           className="text-xs text-blue-500 hover:underline flex items-center gap-1"
                         >
-                          View Original <ExternalLink className="w-2.5 h-2.5" />
+                          View original blog <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       </>
                     )}
