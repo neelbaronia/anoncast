@@ -184,13 +184,9 @@ export default function Home() {
             {/* Show Image */}
             <div className="mb-8 w-32 h-32 md:w-48 md:h-48 rounded-3xl overflow-hidden shadow-2xl border-4 border-white animate-in fade-in zoom-in duration-1000">
               <img 
-                src="https://www.anoncast.net/logo.png" 
+                src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png" 
                 alt="Anoncast Show Art" 
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Fallback if logo.png doesn't exist yet
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&auto=format&fit=crop&q=60";
-                }}
               />
             </div>
 
