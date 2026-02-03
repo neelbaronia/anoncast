@@ -88,8 +88,24 @@ export default function Home() {
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    
+    // Clear all persistence data
+    const keysToRemove = [
+      'pending_preview',
+      'pending_segments',
+      'pending_step',
+      'last_title',
+      'last_author',
+      'last_image',
+      'last_platform',
+      'last_url',
+      'last_word_count',
+      'last_reading_time',
+      'last_show_id'
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    
     setResetKey(prev => prev + 1);
-    // Also update URL without refresh if needed, but for MVP just reset state
     window.history.pushState({}, '', '/');
   };
 
@@ -184,6 +200,20 @@ export default function Home() {
                 <path d="M12 17c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>
               </svg>
               Apple Podcasts
+            </a>
+
+            <a 
+              href="https://www.anoncast.net/api/feed/00000000-0000-0000-0000-000000000000" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3 px-8 py-4 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-full font-semibold transition-all shadow-lg hover:scale-105 active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" className="w-6 h-6 fill-[#f26522]">
+                <path d="M6.18,15.64A2.18,2.18,0,0,1,8.36,17.82,2.18,2.18,0,0,1,6.18,20,2.18,2.18,0,0,1,4,17.82,2.18,2.18,0,0,1,6.18,15.64Z"/>
+                <path d="M4,4.44V8.05a12.15,12.15,0,0,1,11.51,11.51h3.61A15.72,15.72,0,0,0,4,4.44Z"/>
+                <path d="M4,10.41v3.41a5.93,5.93,0,0,1,5.77,5.77h3.41A9.3,9.3,0,0,0,4,10.41Z"/>
+              </svg>
+              RSS Feed
             </a>
           </div>
             
