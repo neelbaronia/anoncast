@@ -106,6 +106,7 @@ export function ConversionFlow() {
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
   const [showId, setShowId] = useState<string | null>("00000000-0000-0000-0000-000000000000");
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [isBuyingDownload, setIsBuyingDownload] = useState(false);
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTestMode, setIsTestMode] = useState(false);
@@ -117,22 +118,40 @@ export function ConversionFlow() {
     
     // 1. Check for payment success
     if (searchParams.get('payment_success') === 'true') {
-      window.history.replaceState({}, '', window.location.pathname);
-      const savedSegments = localStorage.getItem('pending_segments');
-      const savedStep = localStorage.getItem('pending_step');
-      const savedPreview = localStorage.getItem('pending_preview');
+      const type = searchParams.get('type') || 'generation';
       
-      if (savedSegments && savedStep === 'generate') {
-        const segments = JSON.parse(savedSegments);
-        setTextSegments(segments);
-        if (savedPreview) {
-          setPreviewData(JSON.parse(savedPreview));
+      if (type === 'generation') {
+        window.history.replaceState({}, '', window.location.pathname);
+        const savedSegments = localStorage.getItem('pending_segments');
+        const savedStep = localStorage.getItem('pending_step');
+        const savedPreview = localStorage.getItem('pending_preview');
+        
+        if (savedSegments && savedStep === 'generate') {
+          const segments = JSON.parse(savedSegments);
+          setTextSegments(segments);
+          if (savedPreview) {
+            setPreviewData(JSON.parse(savedPreview));
+          }
+          setCurrentStep('generate');
+          setTimeout(() => {
+            handleGenerate(segments);
+          }, 500);
+          return;
         }
-        setCurrentStep('generate');
-        setTimeout(() => {
-          handleGenerate(segments);
-        }, 500);
-        return; // Exit early if we handled payment success
+      } else if (type === 'download') {
+        // Trigger download for the current session audio
+        const audioUrl = localStorage.getItem('pending_download_url');
+        const title = localStorage.getItem('last_title') || 'audio';
+        if (audioUrl) {
+          const a = document.createElement('a');
+          a.href = audioUrl;
+          a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          localStorage.removeItem('pending_download_url');
+        }
+        window.history.replaceState({}, '', window.location.pathname);
       }
     }
 
@@ -381,6 +400,35 @@ export function ConversionFlow() {
       console.error('Payment error:', error);
       alert('Failed to start payment process');
       setPaymentProcessing(false);
+    }
+  };
+
+  const handleBuyDownload = async () => {
+    if (!generatedAudioUrl) return;
+    setIsBuyingDownload(true);
+    try {
+      localStorage.setItem('pending_download_url', generatedAudioUrl);
+      
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: 5,
+          title: previewData?.title || localStorage.getItem('last_title'),
+          type: 'download'
+        }),
+      });
+      
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Failed to start payment process');
+      setIsBuyingDownload(false);
     }
   };
 
@@ -1286,12 +1334,16 @@ export function ConversionFlow() {
                 )}
                 
                 <Button 
-                  variant="outline" 
-                  onClick={handleExportAudio}
-                  className="h-12 border-gray-200 text-gray-700 hover:bg-gray-50"
+                  onClick={handleBuyDownload}
+                  disabled={isBuyingDownload}
+                  className="h-12 bg-gray-900 hover:bg-gray-800 text-white font-bold"
                 >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Export Audio
+                  {isBuyingDownload ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Buy MP3 Download ($5)
                 </Button>
               </div>
 

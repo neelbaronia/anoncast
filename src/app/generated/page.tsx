@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, Pause, ExternalLink, Calendar, Clock, User } from "lucide-react";
+import { Loader2, Play, Pause, ExternalLink, Calendar, Clock, User, Download, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 interface Episode {
@@ -22,6 +22,7 @@ export default function GeneratedBlogsPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [audio] = useState<HTMLAudioElement | null>(typeof window !== 'undefined' ? new Audio() : null);
 
   useEffect(() => {
@@ -34,7 +35,27 @@ export default function GeneratedBlogsPage() {
           throw new Error(result.error || 'Failed to fetch');
         }
 
-        setEpisodes(result.data);
+        const data = result.data;
+        setEpisodes(data);
+
+        // Check for payment success redirect
+        const searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.get('payment_success') === 'true' && searchParams.get('type') === 'download') {
+          const episodeId = searchParams.get('episodeId');
+          const episode = data.find((e: Episode) => e.id === episodeId);
+          if (episode) {
+            // Trigger actual download
+            const a = document.createElement('a');
+            a.href = episode.audio_url;
+            a.download = `podcast-${episode.id}.mp3`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // Clean up URL
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        }
       } catch (err) {
         console.error("Error fetching episodes:", err);
       } finally {
@@ -44,6 +65,33 @@ export default function GeneratedBlogsPage() {
 
     fetchEpisodes();
   }, []);
+
+  const handleBuyDownload = async (episode: Episode) => {
+    setPayingId(episode.id);
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: 5,
+          title: episode.title,
+          type: 'download',
+          episodeId: episode.id
+        }),
+      });
+      
+      const { url } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Failed to start payment process');
+      setPayingId(null);
+    }
+  };
 
   const togglePlay = (episode: Episode) => {
     if (!audio) return;
@@ -191,12 +239,16 @@ export default function GeneratedBlogsPage() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-[10px] h-7 px-3 border border-gray-100 rounded-full hover:bg-gray-50 text-gray-500"
-                      asChild
+                      disabled={payingId === episode.id}
+                      className="text-[10px] h-7 px-3 border border-gray-100 rounded-full hover:bg-gray-50 text-gray-500 font-bold"
+                      onClick={() => handleBuyDownload(episode)}
                     >
-                      <a href={episode.audio_url} download={`podcast-${episode.id}.mp3`}>
-                        Download
-                      </a>
+                      {payingId === episode.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      ) : (
+                        <Download className="w-3 h-3 mr-1" />
+                      )}
+                      Buy MP3 ($5)
                     </Button>
                   </div>
                 </div>

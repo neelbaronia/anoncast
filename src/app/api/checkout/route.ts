@@ -9,7 +9,7 @@ const isTestMode = stripeSecretKey?.startsWith('sk_test_');
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, title } = await request.json();
+    const { amount, title, type, episodeId } = await request.json();
 
     if (!amount || isNaN(amount)) {
       return NextResponse.json(
@@ -17,6 +17,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Determine return paths
+    const origin = request.nextUrl.origin;
+    const baseSuccessUrl = type === 'download' ? `${origin}/generated` : origin;
+    const baseCancelUrl = type === 'download' ? `${origin}/generated` : origin;
 
     // Create a Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -26,7 +31,8 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: `${isTestMode ? '[TEST] ' : ''}Podcast Generation: ${title || 'Untitled'}`,
+              name: `${isTestMode ? '[TEST] ' : ''}${type === 'download' ? 'MP3 Download' : 'Podcast Generation'}: ${title || 'Untitled'}`,
+              description: type === 'download' ? 'Direct high-quality MP3 file download' : 'AI Voice synthesis and audio processing',
             },
             unit_amount: Math.round(amount * 100), // Convert to cents
           },
@@ -34,8 +40,12 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${request.nextUrl.origin}/?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${request.nextUrl.origin}/?payment_cancelled=true`,
+      success_url: `${baseSuccessUrl}?payment_success=true&type=${type || 'generation'}${episodeId ? `&episodeId=${episodeId}` : ''}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseCancelUrl}?payment_cancelled=true`,
+      metadata: {
+        type: type || 'generation',
+        episodeId: episodeId || '',
+      }
     });
 
     return NextResponse.json({ id: session.id, url: session.url, isTestMode });
