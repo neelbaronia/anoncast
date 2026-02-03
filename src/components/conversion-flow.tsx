@@ -22,7 +22,8 @@ import {
   CreditCard,
   Lock,
   X,
-  Square
+  Square,
+  Download
 } from "lucide-react";
 
 type Step = "input" | "review" | "generate" | "publish";
