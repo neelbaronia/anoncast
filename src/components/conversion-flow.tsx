@@ -629,8 +629,8 @@ export function ConversionFlow() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-semibold text-gray-900 truncate">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900">
                       {previewData.title}
                     </h3>
                     {previewData.platform && (
@@ -1281,7 +1281,7 @@ export function ConversionFlow() {
                     </button>
                   </div>
                   <div className="p-4 bg-white">
-                    <h3 className="font-semibold text-gray-900 mb-1 truncate">
+                    <h3 className="font-semibold text-gray-900 mb-1">
                       {previewData?.title || "Untitled Article"}
                     </h3>
                     <p className="text-sm text-gray-500">
