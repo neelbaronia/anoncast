@@ -38,16 +38,38 @@ const mediumScraper: PlatformScraper = {
     const featuredImage = $('meta[property="og:image"]').attr('content') ||
                           $('article img').first().attr('src') || null;
     
-    // Medium article content is in <article> with specific structure
-    const articleElement = $('article');
+    // Medium article content is in <article> or specific section tags
     const contentParagraphs: string[] = [];
     
-    articleElement.find('p, h2, h3, blockquote').each((_, el) => {
+    // Try multiple selectors for Medium content
+    const selectors = [
+      'article p', 'article h2', 'article h3', 'article blockquote',
+      'section p', 'section h2', 'section h3',
+      '.post-content p', '.post-content h2', '.post-content h3',
+      '[data-testid="postContent"] p', '[data-testid="postContent"] h2', '[data-testid="postContent"] h3',
+      'p.pw-post-body-paragraph'
+    ];
+    
+    $(selectors.join(', ')).each((_, el) => {
       const text = $(el).text().trim();
-      if (text && text.length > 10) {
+      // Filter out meta info like "5 min read", "Listen", or author bios
+      if (text && text.length > 20 && 
+          !text.startsWith('Follow') && 
+          !text.startsWith('Listen') &&
+          !text.includes('min read')) {
         contentParagraphs.push(text);
       }
     });
+    
+    // If still no paragraphs, try looking for any p tags in the main body as a last resort
+    if (contentParagraphs.length === 0) {
+      $('p').each((_, el) => {
+        const text = $(el).text().trim();
+        if (text && text.length > 30 && !text.includes('©')) {
+          contentParagraphs.push(text);
+        }
+      });
+    }
     
     return {
       title,
@@ -226,10 +248,19 @@ const genericScraper: PlatformScraper = {
                         $('body');
     
     // First try standard paragraph tags
-    mainContent.find('p, h2, h3, h4').each((_, el) => {
+    mainContent.find('p, h2, h3, h4, blockquote, section, div[class*="content"], div[class*="text"], div[class*="body"]').each((_, el) => {
+      // Don't grab text from nested containers that we'll process anyway
+      if ($(el).find('p, h2, h3, h4').length > 0 && !['P', 'H2', 'H3', 'H4'].includes(el.tagName.toUpperCase())) {
+        return;
+      }
+
       const text = $(el).text().trim();
       // Filter out very short paragraphs and navigation/footer text
-      if (text && text.length > 20 && !text.includes('©') && !text.includes('cookie')) {
+      if (text && text.length > 30 && 
+          !text.includes('©') && 
+          !text.includes('cookie') && 
+          !text.startsWith('Follow') &&
+          !text.includes('Sign up')) {
         contentParagraphs.push(text);
       }
     });
@@ -314,9 +345,14 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
   // Fetch the HTML
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Sec-Ch-Ua': '"Not A(Bit:Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
     }
   });
   
@@ -332,12 +368,35 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
   let detectedPlatform = 'Custom';
   
   for (const scraper of scrapers) {
+    // Skip generic scraper in the first pass
+    if (scraper === genericScraper) continue;
+
     if (scraper.detect(url, $)) {
-      scraperResult = scraper.scrape(url, $);
-      detectedPlatform = scraperResult.platform || 'Custom';
-      break;
+      const result = scraper.scrape(url, $);
+      detectedPlatform = result.platform || 'Custom';
+      
+      if (result.paragraphs && result.paragraphs.length > 0) {
+        scraperResult = result;
+        break;
+      } else {
+        // Matched but no content, save metadata and try others
+        scraperResult = { ...scraperResult, ...result };
+      }
     }
   }
+  
+  // If we still have no paragraphs, use the generic scraper
+  if (!scraperResult.paragraphs || scraperResult.paragraphs.length === 0) {
+    const genericResult = genericScraper.scrape(url, $);
+    scraperResult = {
+      ...genericResult, // Take title/author/etc from generic if not found yet
+      ...scraperResult, // Keep specific metadata if we had it
+      paragraphs: genericResult.paragraphs // But definitely take the paragraphs found by generic
+    };
+  }
+  
+  // If we still have no paragraphs, the genericScraper (which is last) will run
+  // but we need to make sure we don't skip it if a previous scraper matched but found nothing
   
   // Deduplicate paragraphs and trim them
   const rawParagraphs = scraperResult.paragraphs || [];

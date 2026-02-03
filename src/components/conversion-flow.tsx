@@ -159,8 +159,14 @@ export function ConversionFlow() {
     // 2. Check for existing preview data if not in a flow
     const lastTitle = localStorage.getItem('last_title');
     const lastShowId = localStorage.getItem('last_show_id');
+    const lastSegments = localStorage.getItem('pending_segments');
+    
     if (lastShowId) {
       setShowId(lastShowId);
+    }
+    
+    if (lastSegments && textSegments.length === 0) {
+      setTextSegments(JSON.parse(lastSegments));
     }
     
     if (lastTitle && !previewData) {
@@ -465,6 +471,12 @@ export function ConversionFlow() {
       localStorage.setItem('last_word_count', scraped.wordCount.toString());
       localStorage.setItem('last_reading_time', scraped.estimatedReadTime);
       localStorage.setItem('last_first_sentence', scraped.paragraphs?.[0] ? getFirstSentence(scraped.paragraphs[0]) : '');
+      localStorage.setItem('pending_segments', JSON.stringify(scraped.paragraphs.map((text, i) => ({ 
+        id: i, 
+        text: text.trim(), 
+        voiceId: "", 
+        confirmed: false 
+      }))));
       
       // Initialize text segments from scraped paragraphs
       setTextSegments(
