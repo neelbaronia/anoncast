@@ -105,7 +105,7 @@ export default function GeneratedBlogsPage() {
 
       <div className="max-w-5xl mx-auto px-8 py-12">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Generated Blogs</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Generated Episodes</h1>
           <p className="text-gray-600">Explore all the blogs and essays that have been converted to podcasts.</p>
         </div>
 
@@ -116,7 +116,7 @@ export default function GeneratedBlogsPage() {
           </div>
         ) : episodes.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-gray-200">
-            <p className="text-gray-500">No blogs have been generated yet.</p>
+            <p className="text-gray-500">No episodes have been generated yet.</p>
             <Link href="/">
               <Button variant="link" className="mt-2 text-blue-500">Create the first one →</Button>
             </Link>
