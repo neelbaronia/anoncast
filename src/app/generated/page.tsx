@@ -6,6 +6,80 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Play, Pause, ExternalLink, Calendar, Clock, User, Download, CreditCard } from "lucide-react";
 import Link from "next/link";
 
+interface FloatingShape {
+  id: number;
+  type: "rect-h" | "rect-v" | "square" | "triangle";
+  color: string;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  rotation: number;
+  duration: number;
+  delay: number;
+  animation: "spin" | "tilt" | "wobble";
+}
+
+const colors = [
+  "#ef4444", // red
+  "#f97316", // orange
+  "#eab308", // yellow
+  "#22c55e", // green
+  "#06b6d4", // cyan
+  "#3b82f6", // blue
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+];
+
+function generateShapes(count: number): FloatingShape[] {
+  const shapes: FloatingShape[] = [];
+  const types: FloatingShape["type"][] = ["rect-h", "rect-v", "square", "triangle"];
+  const animations: FloatingShape["animation"][] = ["spin", "tilt", "wobble"];
+  
+  for (let i = 0; i < count; i++) {
+    const type = types[Math.floor(Math.random() * types.length)];
+    let width: number, height: number;
+    
+    switch (type) {
+      case "square":
+        const squareSize = 40 + Math.random() * 100;
+        width = squareSize;
+        height = squareSize;
+        break;
+      case "rect-h": // horizontal rectangle
+        width = 80 + Math.random() * 150;
+        height = 15 + Math.random() * 40;
+        break;
+      case "rect-v": // vertical rectangle
+        width = 15 + Math.random() * 40;
+        height = 80 + Math.random() * 150;
+        break;
+      case "triangle":
+        width = 50 + Math.random() * 80;
+        height = 50 + Math.random() * 80;
+        break;
+      default:
+        width = 50;
+        height = 50;
+    }
+    
+    shapes.push({
+      id: i,
+      type,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      width,
+      height,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      rotation: -60 + Math.random() * 120,
+      duration: 15 + Math.random() * 25,
+      delay: Math.random() * -15,
+      animation: animations[Math.floor(Math.random() * animations.length)],
+    });
+  }
+  return shapes;
+}
+
 interface Episode {
   id: string;
   title: string;
@@ -24,6 +98,11 @@ export default function GeneratedBlogsPage() {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [audio] = useState<HTMLAudioElement | null>(typeof window !== 'undefined' ? new Audio() : null);
+  const [shapes, setShapes] = useState<FloatingShape[]>([]);
+
+  useEffect(() => {
+    setShapes(generateShapes(12));
+  }, []);
 
   useEffect(() => {
     async function fetchEpisodes() {
@@ -126,9 +205,39 @@ export default function GeneratedBlogsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50/50">
-      {/* Header */}
-      <header className="py-6 px-8 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <main className="min-h-screen bg-white relative overflow-hidden">
+      {/* Floating Shapes */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {shapes.map((shape) => (
+          <div
+            key={shape.id}
+            className={`absolute ${
+              shape.animation === "spin" 
+                ? "animate-float-spin" 
+                : shape.animation === "tilt" 
+                  ? "animate-float-tilt" 
+                  : "animate-float-wobble"
+            }`}
+            style={{
+              left: `${shape.x}%`,
+              top: `${shape.y}%`,
+              width: shape.type === "triangle" ? 0 : shape.width,
+              height: shape.type === "triangle" ? 0 : shape.height,
+              backgroundColor: shape.type === "triangle" ? "transparent" : shape.color,
+              borderLeft: shape.type === "triangle" ? `${shape.width / 2}px solid transparent` : undefined,
+              borderRight: shape.type === "triangle" ? `${shape.width / 2}px solid transparent` : undefined,
+              borderBottom: shape.type === "triangle" ? `${shape.height}px solid ${shape.color}` : undefined,
+              opacity: 0.85,
+              animationDuration: `${shape.duration}s`,
+              animationDelay: `${shape.delay}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="py-6 px-8 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link href="/" className="font-semibold text-lg hover:opacity-70 transition-opacity">
             anoncast
@@ -317,6 +426,7 @@ export default function GeneratedBlogsPage() {
           </Card>
         </div>
       )}
+    </div>
     </main>
   );
 }
