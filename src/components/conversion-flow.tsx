@@ -611,11 +611,11 @@ export function ConversionFlow() {
       </div>
 
       {/* Step Content */}
-      <Card className="border border-gray-200 shadow-sm bg-white overflow-hidden">
-        <CardContent className="p-0">
-          {/* Persistent Preview Header */}
-          {previewData && currentStep !== "publish" && (
-            <div className="bg-gray-50 border-b border-gray-100 p-6">
+      <div className="space-y-6">
+        {/* Persistent Preview Card */}
+        {previewData && currentStep !== "publish" && (
+          <Card className="border border-gray-200 shadow-sm bg-white overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="p-6">
               <div className="flex gap-6">
                 {previewData.featuredImage ? (
                   <img 
@@ -624,7 +624,7 @@ export function ConversionFlow() {
                     className="w-24 h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                  <div className="w-24 h-24 bg-gray-50 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
                     <FileText className="w-8 h-8 text-gray-400" />
                   </div>
                 )}
@@ -666,9 +666,11 @@ export function ConversionFlow() {
                 )}
               </div>
             </div>
-          )}
+          </Card>
+        )}
 
-          <div className="p-8">
+        <Card className="border border-gray-200 shadow-sm bg-white overflow-hidden">
+          <CardContent className="p-8">
             {/* Step 1: Input */}
             {currentStep === "input" && (
               <div className="space-y-6">
@@ -1377,9 +1379,9 @@ export function ConversionFlow() {
               </div>
             </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
     </div>
+  </div>
   );
 }
