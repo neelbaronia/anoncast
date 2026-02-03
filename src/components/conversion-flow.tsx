@@ -1172,6 +1172,50 @@ export function ConversionFlow() {
             {/* Step 3: Generate */}
             {currentStep === "generate" && (
               <div className="space-y-6">
+                {/* Persistent Preview Card at top of Generate step */}
+                {previewData && (
+                  <Card 
+                    className="border border-gray-200 shadow-sm overflow-hidden mb-8"
+                    style={{ 
+                      backgroundColor: '#f0f9ff', // Clean Sky Blue pastel
+                    }}
+                  >
+                    <div className="p-6">
+                      <div className="flex gap-6">
+                        {previewData.featuredImage ? (
+                          <img 
+                            src={previewData.featuredImage} 
+                            alt="Featured" 
+                            className="w-24 h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                            <FileText className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {previewData.title}
+                            </h3>
+                            {previewData.platform && (
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-5">
+                                {previewData.platform}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-gray-500">
+                            <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
+                            <span>•</span>
+                            <span>{previewData.wordCount} words</span>
+                            <span>•</span>
+                            <span>{previewData.estimatedReadTime}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
                 <div className="text-center mb-8">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     Generate audio
