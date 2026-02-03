@@ -161,22 +161,43 @@ export default function GeneratedBlogsPage() {
                     <span className="text-xs text-gray-500 truncate">{episode.show_author || 'Anoncast'}</span>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <a 
+                        href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold text-[#1DB954] hover:opacity-80 transition-opacity flex items-center gap-1"
+                      >
+                        Spotify
+                      </a>
+                      <span className="text-gray-300 text-[10px]">•</span>
+                      <a 
+                        href="#" 
+                        className="text-[10px] font-bold text-[#872ec4] hover:opacity-80 transition-opacity flex items-center gap-1"
+                      >
+                        Apple
+                      </a>
+                      <span className="text-gray-300 text-[10px]">•</span>
+                      <Link 
+                        href={`/api/feed/00000000-0000-0000-0000-000000000000`} 
+                        target="_blank"
+                        className="text-[10px] font-bold text-[#f26522] hover:opacity-80 transition-opacity flex items-center gap-1"
+                      >
+                        RSS
+                      </Link>
+                    </div>
+
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="text-[10px] h-7 px-3 border border-gray-100 rounded-full hover:bg-gray-50"
+                      className="text-[10px] h-7 px-3 border border-gray-100 rounded-full hover:bg-gray-50 text-gray-500"
                       asChild
                     >
                       <a href={episode.audio_url} download={`podcast-${episode.id}.mp3`}>
                         Download
                       </a>
                     </Button>
-                    <Link href={`/api/feed/00000000-0000-0000-0000-000000000000`} target="_blank">
-                      <Button variant="ghost" size="sm" className="text-[10px] h-7 px-3 text-blue-500 hover:bg-blue-50 rounded-full font-bold">
-                        RSS Feed
-                      </Button>
-                    </Link>
                   </div>
                 </div>
               </div>
