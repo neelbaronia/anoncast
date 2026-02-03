@@ -182,7 +182,7 @@ export default function Home() {
           
           <div className="mt-12 flex flex-col items-center">
             {/* Show Image */}
-            <div className="mb-8 w-32 h-32 md:w-48 md:h-48 rounded-3xl overflow-hidden shadow-2xl border-4 border-white animate-in fade-in zoom-in duration-1000">
+            <div className="mb-10 w-48 h-48 md:w-64 md:h-64 rounded-[2.5rem] overflow-hidden shadow-2xl border-8 border-white animate-in fade-in zoom-in duration-1000">
               <img 
                 src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png" 
                 alt="Anoncast Show Art" 
