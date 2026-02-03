@@ -107,76 +107,80 @@ export default function GeneratedBlogsPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="space-y-12 max-w-2xl mx-auto">
             {episodes.map((episode) => (
-              <Card key={episode.id} className="group hover:shadow-md transition-all border-gray-200 overflow-hidden flex flex-col">
-                <div className="relative aspect-video overflow-hidden bg-gray-100">
+              <div key={episode.id} className="group border-b border-gray-100 pb-12 last:border-0">
+                <div className="relative rounded-2xl overflow-hidden bg-gray-100 shadow-sm mb-6">
                   {episode.show_image ? (
                     <img 
                       src={episode.show_image} 
                       alt={episode.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-auto block"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-6">
-                      <h3 className="text-white font-bold text-sm text-center line-clamp-2">
+                    <div className="w-full aspect-video flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-12">
+                      <h3 className="text-white font-bold text-2xl text-center">
                         {episode.title}
                       </h3>
                     </div>
                   )}
                   <button 
                     onClick={() => togglePlay(episode)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/40 transition-colors"
+                    className="absolute inset-0 flex items-center justify-center bg-black/5 group-hover:bg-black/20 transition-colors"
                   >
-                    <div className="w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center transform scale-90 group-hover:scale-100 transition-transform">
+                    <div className="w-20 h-20 rounded-full bg-white/90 backdrop-blur shadow-2xl flex items-center justify-center transform transition-transform group-hover:scale-110">
                       {playingId === episode.id ? (
-                        <Pause className="w-5 h-5 text-gray-900" />
+                        <Pause className="w-8 h-8 text-gray-900" />
                       ) : (
-                        <Play className="w-5 h-5 text-gray-900 ml-1" />
+                        <Play className="w-8 h-8 text-gray-900 ml-1" />
                       )}
                     </div>
                   </button>
                 </div>
                 
-                <CardContent className="p-5 flex-1 flex flex-col">
-                  <h3 className="font-bold text-gray-900 mb-2 line-clamp-2 leading-tight">
-                    {episode.title}
-                  </h3>
+                <div className="px-2">
+                  <div className="flex items-center gap-3 text-xs font-medium text-gray-400 uppercase tracking-widest mb-3">
+                    <span>{formatDate(episode.published_at)}</span>
+                    <span>•</span>
+                    <span>{formatDuration(episode.duration)}</span>
+                  </div>
                   
-                  <div className="space-y-2 mb-4 flex-1">
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <User className="w-3 h-3" />
-                      <span className="truncate">{episode.show_author || 'Anoncast'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Calendar className="w-3 h-3" />
-                      <span>{formatDate(episode.published_at)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatDuration(episode.duration)}</span>
-                    </div>
-                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-3 leading-tight group-hover:text-blue-600 transition-colors">
+                    {episode.title}
+                  </h2>
+                  
+                  <p className="text-gray-600 text-sm mb-6 line-clamp-3 leading-relaxed">
+                    {episode.description}
+                  </p>
 
-                  <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-xs h-8 px-2 text-gray-600 hover:text-gray-900"
-                      asChild
-                    >
-                      <a href={episode.audio_url} download={`podcast-${episode.id}.mp3`}>
-                        Download
-                      </a>
-                    </Button>
-                    <Link href={`/api/feed/00000000-0000-0000-0000-000000000000`} target="_blank">
-                      <Button variant="ghost" size="sm" className="text-xs h-8 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50">
-                        RSS <ExternalLink className="w-3 h-3 ml-1" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User className="w-3 h-3 text-gray-500" />
+                      </div>
+                      <span>{episode.show_author || 'Anoncast'}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-9 px-4 border-gray-200 rounded-full"
+                        asChild
+                      >
+                        <a href={episode.audio_url} download={`podcast-${episode.id}.mp3`}>
+                          Download
+                        </a>
                       </Button>
-                    </Link>
+                      <Link href={`/api/feed/00000000-0000-0000-0000-000000000000`} target="_blank">
+                        <Button variant="ghost" size="sm" className="text-xs h-9 px-4 text-blue-500 hover:bg-blue-50 rounded-full font-semibold">
+                          RSS Feed
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
