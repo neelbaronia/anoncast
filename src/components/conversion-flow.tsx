@@ -642,22 +642,22 @@ export function ConversionFlow() {
       {/* Step Content */}
       <div className="space-y-6">
         <Card className="border border-gray-200 shadow-sm bg-white overflow-hidden">
-          <CardContent className="p-8">
+          <CardContent className="p-6">
             {/* Step 1: Input */}
             {currentStep === "input" && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {!previewData && (
-                  <div className="text-center mb-8">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  <div className="text-center mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-1">
                       Paste your blog link
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-gray-500 text-sm">
                       We'll extract the content and prepare it for audio conversion
                     </p>
                   </div>
                 )}
                 
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <Input
                     type="url"
                     placeholder="https://your-blog.com/article"
@@ -666,13 +666,13 @@ export function ConversionFlow() {
                       setUrl(e.target.value);
                       if (previewData) handleClearPreview();
                     }}
-                    className="flex-1 h-12 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
+                    className="flex-1 h-11 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
                   />
                   {(!previewData || isLoading) && (
                     <Button 
                       onClick={handleFetch}
                       disabled={!url || isLoading}
-                      className="h-12 px-6 bg-gray-900 hover:bg-gray-800 text-white"
+                      className="h-11 px-6 bg-gray-900 hover:bg-gray-800 text-white"
                     >
                       {isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -687,20 +687,20 @@ export function ConversionFlow() {
                 </div>
 
                 {scrapeError && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">
                     {scrapeError}
                   </div>
                 )}
 
                 {!previewData && !scrapeError && (
-                  <div className="flex items-center justify-center gap-4 pt-4">
-                    <span className="text-xs text-gray-400">Works with</span>
-                    <div className="flex gap-3">
+                  <div className="flex items-center justify-center gap-3 pt-2">
+                    <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Works with</span>
+                    <div className="flex gap-2">
                       {["Medium", "Substack", "WordPress", "Ghost", "Custom"].map((platform) => (
                         <Badge 
                           key={platform} 
                           variant="secondary"
-                          className="bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-[10px] px-2 h-5"
                         >
                           {platform}
                         </Badge>
@@ -717,31 +717,31 @@ export function ConversionFlow() {
                       backgroundColor: '#f0f9ff', // Clean Sky Blue pastel
                     }}
                   >
-                    <div className="p-6">
-                      <div className="flex gap-6">
+                    <div className="p-4">
+                      <div className="flex gap-4">
                         {previewData.featuredImage ? (
                           <img 
                             src={previewData.featuredImage} 
                             alt="Featured" 
-                            className="w-24 h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            className="w-16 h-16 object-cover rounded-lg shadow-sm flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
-                            <FileText className="w-8 h-8 text-gray-400" />
+                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                            <FileText className="w-6 h-6 text-gray-400" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <h3 className="text-base font-semibold text-gray-900">
                               {previewData.title}
                             </h3>
                             {previewData.platform && (
-                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-5">
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-4">
                                 {previewData.platform}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500 mb-2">
+                          <div className="flex items-center gap-3 text-xs text-gray-500 mb-1">
                             <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
                             <span>•</span>
                             <span>{previewData.wordCount} words</span>
@@ -752,7 +752,7 @@ export function ConversionFlow() {
                             href={previewData.url || "#"} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-xs text-blue-500 hover:underline block truncate max-w-md"
+                            className="text-[10px] text-blue-500 hover:underline block truncate max-w-md"
                           >
                             {previewData.url}
                           </a>
@@ -762,7 +762,7 @@ export function ConversionFlow() {
                           className="text-gray-400 hover:text-gray-600 p-1 self-start"
                           title="Clear preview"
                         >
-                          <X className="w-5 h-5" />
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -770,11 +770,11 @@ export function ConversionFlow() {
                 )}
 
                 {previewData && (
-                  <div className="flex justify-end pt-4">
+                  <div className="flex justify-end pt-2">
                     <Button 
                       onClick={handleContinueToReview}
                       size="lg"
-                      className="h-12 px-8 bg-gray-900 hover:bg-gray-800 text-white"
+                      className="h-11 px-8 bg-gray-900 hover:bg-gray-800 text-white"
                     >
                       Continue to Review
                       <ArrowRight className="w-4 h-4 ml-2" />
@@ -786,40 +786,40 @@ export function ConversionFlow() {
 
             {/* Step 2: Review */}
             {currentStep === "review" && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Persistent Preview Card at top of Review/Generate steps */}
                 {previewData && (
                   <Card 
-                    className="border border-gray-200 shadow-sm overflow-hidden mb-8"
+                    className="border border-gray-200 shadow-sm overflow-hidden mb-6"
                     style={{ 
                       backgroundColor: '#f0f9ff', // Clean Sky Blue pastel
                     }}
                   >
-                    <div className="p-6">
-                      <div className="flex gap-6">
+                    <div className="p-4">
+                      <div className="flex gap-4">
                         {previewData.featuredImage ? (
                           <img 
                             src={previewData.featuredImage} 
                             alt="Featured" 
-                            className="w-24 h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            className="w-16 h-16 object-cover rounded-lg shadow-sm flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
-                            <FileText className="w-8 h-8 text-gray-400" />
+                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                            <FileText className="w-6 h-6 text-gray-400" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <h3 className="text-base font-semibold text-gray-900">
                               {previewData.title}
                             </h3>
                             {previewData.platform && (
-                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-5">
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-4">
                                 {previewData.platform}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500">
+                          <div className="flex items-center gap-3 text-xs text-gray-500">
                             <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
                             <span>•</span>
                             <span>{previewData.wordCount} words</span>
@@ -831,11 +831,11 @@ export function ConversionFlow() {
                     </div>
                   </Card>
                 )}
-                <div className="text-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                <div className="text-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-1">
                     Assign voices to your content
                   </h2>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-gray-500 text-xs">
                     Select a voice from the left, then click paragraphs to assign
                   </p>
                 </div>
@@ -1171,8 +1171,8 @@ export function ConversionFlow() {
 
             {/* Step 3: Generate */}
             {currentStep === "generate" && (
-              <div className="space-y-6">
-                <div className="text-center mb-8">
+              <div className="space-y-4">
+                <div className="text-center">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     Generate audio
                   </h2>
@@ -1181,36 +1181,36 @@ export function ConversionFlow() {
                 {/* Persistent Preview Card below title */}
                 {previewData && (
                   <Card 
-                    className="border border-gray-200 shadow-sm overflow-hidden mb-8"
+                    className="border border-gray-200 shadow-sm overflow-hidden mb-4"
                     style={{ 
                       backgroundColor: '#f0f9ff', // Clean Sky Blue pastel
                     }}
                   >
-                    <div className="p-6">
-                      <div className="flex gap-6 text-left">
+                    <div className="p-4">
+                      <div className="flex gap-4 text-left">
                         {previewData.featuredImage ? (
                           <img 
                             src={previewData.featuredImage} 
                             alt="Featured" 
-                            className="w-24 h-24 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            className="w-16 h-16 object-cover rounded-lg shadow-sm flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-24 h-24 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
-                            <FileText className="w-8 h-8 text-gray-400" />
+                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                            <FileText className="w-6 h-6 text-gray-400" />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-base font-semibold text-gray-900">
                               {previewData.title}
                             </h3>
                             {previewData.platform && (
-                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-5">
+                              <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-[10px] h-4">
                                 {previewData.platform}
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500">
+                          <div className="flex items-center gap-3 text-xs text-gray-500">
                             <span className="truncate">By {previewData.author || 'Unknown Author'}</span>
                             <span>•</span>
                             <span>{previewData.wordCount} words</span>
@@ -1224,11 +1224,11 @@ export function ConversionFlow() {
                 )}
 
               {!isGenerating && generationProgress === 0 ? (
-                <div className="text-center py-8">
-                  <div className="flex items-center justify-center gap-6 mb-8">
-                    <div className="p-4 bg-gray-50 rounded-lg text-left">
-                      <div className="text-sm text-gray-500 mb-1">Total cost</div>
-                      <div className="text-2xl font-semibold text-gray-900">
+                <div className="text-center py-4">
+                  <div className="flex items-center justify-center gap-6 mb-4">
+                    <div className="p-3 bg-gray-50 rounded-lg text-left">
+                      <div className="text-xs text-gray-500 mb-0.5">Total cost</div>
+                      <div className="text-xl font-semibold text-gray-900">
                         ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
                       </div>
                     </div>
@@ -1237,28 +1237,28 @@ export function ConversionFlow() {
                         onClick={handlePayment}
                         disabled={paymentProcessing}
                         size="lg"
-                        className="h-14 px-8 bg-gray-900 hover:bg-gray-800 text-white"
+                        className="h-12 px-8 bg-gray-900 hover:bg-gray-800 text-white"
                       >
                         {paymentProcessing ? (
-                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         ) : (
-                          <CreditCard className="w-5 h-5 mr-2" />
+                          <CreditCard className="w-4 h-4 mr-2" />
                         )}
                         {paymentProcessing ? "Processing..." : "Pay & Generate"}
                       </Button>
                       {(isTestMode || (typeof window !== 'undefined' && localStorage.getItem('is_test_mode') === 'true')) && (
-                        <div className="mt-2 text-[10px] font-bold text-amber-600 tracking-wider uppercase">
+                        <div className="mt-1.5 text-[9px] font-bold text-amber-600 tracking-wider uppercase">
                           Stripe Test Mode Active
                         </div>
                       )}
                     </div>
                   </div>
-                  <p className="mt-4 text-sm text-gray-500">
+                  <p className="text-xs text-gray-500">
                     Estimated time: ~30 seconds
                   </p>
                   <button
                     onClick={() => setCurrentStep("review")}
-                    className="mt-6 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                    className="mt-4 text-xs text-gray-500 hover:text-gray-900 transition-colors"
                   >
                     ← Back to Review
                   </button>
@@ -1359,34 +1359,34 @@ export function ConversionFlow() {
 
           {/* Step 4: Publish */}
           {currentStep === "publish" && (
-            <div className="space-y-6">
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center gap-2 text-green-600 mb-2">
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center gap-2 text-green-600 mb-1">
                   <CheckCircle2 className="w-5 h-5" />
                   <span className="font-medium">Ready to publish</span>
                 </div>
-                <p className="text-gray-600">
+                <p className="text-gray-500 text-sm">
                   Your audio is ready. Share it with the world.
                 </p>
               </div>
 
               {/* Audio Card */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden max-w-md mx-auto">
+              <div className="border border-gray-200 rounded-xl overflow-hidden max-w-md mx-auto shadow-sm">
                 <div className="relative">
                   {previewData?.featuredImage ? (
                     <img 
                       src={previewData.featuredImage} 
                       alt="Featured" 
-                      className="w-full h-40 object-cover"
+                      className="w-full h-32 object-cover"
                     />
                   ) : (
-                      <div className="w-full h-40 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-8 flex items-center justify-center text-center relative overflow-hidden">
+                      <div className="w-full h-32 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 flex items-center justify-center text-center relative overflow-hidden">
                         {/* Decorative background elements */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-20">
                           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500 rounded-full blur-3xl animate-pulse" />
                           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full blur-3xl animate-pulse delay-700" />
                         </div>
-                        <h3 className="text-white font-bold text-xl leading-tight line-clamp-3 drop-shadow-lg z-10">
+                        <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow-lg z-10 px-4">
                           {previewData?.title || "Untitled Article"}
                         </h3>
                       </div>
@@ -1396,25 +1396,25 @@ export function ConversionFlow() {
                       onClick={() => setIsPlaying(!isPlaying)}
                       className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors"
                     >
-                      <div className="w-14 h-14 rounded-full bg-white shadow-lg flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center">
                         {isPlaying ? (
-                          <Pause className="w-6 h-6 text-gray-900" />
+                          <Pause className="w-5 h-5 text-gray-900" />
                         ) : (
-                          <Play className="w-6 h-6 text-gray-900 ml-1" />
+                          <Play className="w-5 h-5 text-gray-900 ml-1" />
                         )}
                       </div>
                     </button>
                   </div>
-                  <div className="p-4 bg-white">
-                    <h3 className="font-semibold text-gray-900 mb-1">
+                  <div className="p-3 bg-white">
+                    <h3 className="font-semibold text-gray-900 text-sm mb-0.5 line-clamp-1">
                       {previewData?.title || "Untitled Article"}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-[10px] text-gray-500">
                       {formatTime(audioDuration)} • {previewData?.author || "Unknown Author"}
                     </p>
                     {/* Mini progress bar */}
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-xs text-gray-400 min-w-[35px]">{formatTime(audioCurrentTime)}</span>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-[9px] text-gray-400 min-w-[30px]">{formatTime(audioCurrentTime)}</span>
                       <input 
                         type="range"
                         min="0"
@@ -1424,30 +1424,30 @@ export function ConversionFlow() {
                         onChange={(e) => handleScrub(Number(e.target.value))}
                         className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer accent-gray-900"
                       />
-                      <span className="text-xs text-gray-400 min-w-[35px] text-right">
+                      <span className="text-[9px] text-gray-400 min-w-[30px] text-right">
                         {formatTime(audioDuration)}
                       </span>
                     </div>
                   </div>
               </div>
                 
-              <div className="flex flex-col gap-3 max-w-md mx-auto pt-4">
+              <div className="flex flex-col gap-2 max-w-md mx-auto pt-2">
                 {showId && (
-                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Your RSS Feed</span>
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none">Live</Badge>
+                      <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Your RSS Feed</span>
+                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none text-[9px] h-4 px-1.5">Live</Badge>
                     </div>
                     <div className="flex gap-2">
                       <Input 
                         readOnly 
                         value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/feed/${showId}`}
-                        className="h-9 text-xs bg-white border-gray-200"
+                        className="h-8 text-[10px] bg-white border-gray-200"
                       />
                       <Button 
                         size="sm" 
                         variant="secondary"
-                        className="h-9 px-3"
+                        className="h-8 px-2 text-[10px]"
                         onClick={() => {
                           const url = `${window.location.origin}/api/feed/${showId}`;
                           navigator.clipboard.writeText(url);
@@ -1457,7 +1457,7 @@ export function ConversionFlow() {
                         Copy
                       </Button>
                     </div>
-                    <p className="text-[10px] text-gray-400 text-center">
+                    <p className="text-[9px] text-gray-400 text-center">
                       Submit this URL to Spotify for Podcasters or Apple Podcasts
                     </p>
                   </div>
@@ -1466,7 +1466,7 @@ export function ConversionFlow() {
                 <Button 
                   onClick={handleBuyDownload}
                   disabled={isBuyingDownload}
-                  className="h-12 bg-gray-900 hover:bg-gray-800 text-white font-bold"
+                  className="h-11 bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm"
                 >
                   {isBuyingDownload ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -1477,7 +1477,7 @@ export function ConversionFlow() {
                 </Button>
               </div>
 
-              <div className="text-center">
+              <div className="text-center pt-2">
                 <button
                   onClick={() => {
                     setCurrentStep("input");
