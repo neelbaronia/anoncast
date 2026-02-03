@@ -48,7 +48,7 @@ export async function GET(
           .ele('itunes:name').txt(show.author || 'Anoncast').up()
           .ele('itunes:email').txt('nbaronia@gmail.com').up() // Your email for Spotify verification
         .up()
-        .ele('itunes:image', { href: show.image_url || 'https://anoncast.xyz/logo.png' }).up() // Need a real URL here eventually
+        .ele('itunes:image', { href: show.image_url || 'https://www.anoncast.net/logo.png' }).up() 
         .ele('itunes:category', { text: 'Technology' }).up()
 
     // Add episodes to feed
@@ -60,7 +60,7 @@ export async function GET(
         .ele('guid', { isPermaLink: 'false' }).txt(episode.id).up()
         .ele('itunes:author').txt(show.author || 'Anoncast').up()
         .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
-        .ele('itunes:image', { href: episode.image_url || show.image_url || 'https://anoncast.xyz/logo.png' }).up()
+        .ele('itunes:image', { href: episode.image_url || show.image_url || 'https://www.anoncast.net/logo.png' }).up()
         .ele('enclosure', {
           url: episode.audio_url,
           length: episode.file_size?.toString() || '0',
