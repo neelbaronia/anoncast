@@ -44,8 +44,12 @@ export async function GET(
         .ele('link').txt(process.env.NEXT_PUBLIC_APP_URL || '').up()
         .ele('language').txt('en-us').up()
         .ele('itunes:author').txt(show.author || 'Anoncast').up()
-        .ele('itunes:image', { href: show.image_url || '' }).up()
-        .ele('itunes:category', { text: 'Technology' }).up() // Default category
+        .ele('itunes:owner')
+          .ele('itunes:name').txt(show.author || 'Anoncast').up()
+          .ele('itunes:email').txt('nbaronia@gmail.com').up() // Your email for Spotify verification
+        .up()
+        .ele('itunes:image', { href: show.image_url || 'https://anoncast.xyz/logo.png' }).up() // Need a real URL here eventually
+        .ele('itunes:category', { text: 'Technology' }).up()
 
     // Add episodes to feed
     episodes.forEach((episode: any) => {
