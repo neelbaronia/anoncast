@@ -90,6 +90,8 @@ interface Episode {
   show_title?: string;
   show_author?: string;
   display_image?: string;
+  spotify_url?: string;
+  apple_url?: string;
 }
 
 export default function GeneratedBlogsPage() {
@@ -349,7 +351,7 @@ export default function GeneratedBlogsPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <a 
-                        href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
+                        href={episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title)}/episodes`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-[10px] font-bold text-[#1DB954] hover:opacity-80 transition-opacity flex items-center gap-1"
@@ -358,7 +360,9 @@ export default function GeneratedBlogsPage() {
                       </a>
                       <span className="text-gray-300 text-[10px]">•</span>
                       <a 
-                        href="#" 
+                        href={episode.apple_url || `https://podcasts.apple.com/us/search?term=${encodeURIComponent(episode.title)}`} 
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-[10px] font-bold text-[#872ec4] hover:opacity-80 transition-opacity flex items-center gap-1"
                       >
                         Apple
