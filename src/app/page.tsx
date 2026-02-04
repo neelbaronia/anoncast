@@ -167,6 +167,14 @@ export default function Home() {
         {/* Hero */}
         <section className="pt-16 pb-12 px-8">
           <div className="max-w-2xl mx-auto text-center">
+            {/* Show Image */}
+            <div className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto">
+              <img 
+                src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+                alt="Anoncast Show Art" 
+                className="w-full h-full object-cover"
+              />
+            </div>
             <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900">
               Turn Your Blog Into a Podcast
             </h1>
@@ -181,15 +189,6 @@ export default function Home() {
           <ConversionFlow key={resetKey} />
           
           <div className="mt-12 flex flex-col items-center">
-            {/* Show Image */}
-                        <div className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000">
-                          <img 
-                            src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
-                            alt="Anoncast Show Art" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-
             {/* Floating Platform Links */}
             <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
               <a 
