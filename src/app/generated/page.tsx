@@ -370,8 +370,8 @@ export default function GeneratedBlogsPage() {
                       </a>
                       <span className="text-gray-300 text-[10px]">•</span>
                       <a 
-                        href={episode.apple_url || `https://podcasts.apple.com/us/search?term=${encodeURIComponent(episode.title)}`} 
-                        onClick={(e) => handlePlatformClick(e, "Apple Podcasts", episode.apple_url || `https://podcasts.apple.com/us/search?term=${encodeURIComponent(episode.title)}`)}
+                        href={episode.apple_url || `https://podcasts.apple.com/us/podcast/anoncast/id1874480499`} 
+                        onClick={(e) => handlePlatformClick(e, "Apple Podcasts", episode.apple_url || `https://podcasts.apple.com/us/podcast/anoncast/id1874480499`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] font-bold text-[#872ec4] hover:opacity-80 transition-opacity flex items-center gap-1"

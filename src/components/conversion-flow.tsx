@@ -1523,8 +1523,10 @@ export function ConversionFlow() {
                   Listen on Spotify
                 </a>
                 <a 
-                  href="#" 
-                  onClick={(e) => handlePlatformClick(e, "Apple Podcasts", "#")}
+                  href="https://podcasts.apple.com/us/podcast/anoncast/id1874480499" 
+                  onClick={(e) => handlePlatformClick(e, "Apple Podcasts", "https://podcasts.apple.com/us/podcast/anoncast/id1874480499")}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 h-10 px-4 bg-[#872ec4] hover:bg-[#9b3fe3] text-white rounded-xl text-[11px] font-bold transition-all shadow-sm active:scale-95"
                 >
                   <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center p-0.5">

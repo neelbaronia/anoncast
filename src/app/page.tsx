@@ -205,7 +205,7 @@ export default function Home() {
               </a>
 
               <a 
-                href="#" 
+                href="https://podcasts.apple.com/us/podcast/anoncast/id1874480499" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="group flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
