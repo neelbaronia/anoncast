@@ -79,7 +79,9 @@ export async function GET(
     return new Response(xml, {
       headers: {
         'Content-Type': 'application/rss+xml',
-        'Cache-Control': 's-maxage=3600, stale-while-revalidate',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
   } catch (error) {
