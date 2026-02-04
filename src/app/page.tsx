@@ -180,7 +180,13 @@ export default function Home() {
         <section className="pt-16 pb-12 px-8 relative">
           <div className="max-w-2xl mx-auto text-center">
             {/* Show Image with Scroll-to-Shrink Effect */}
-            <div className="h-[340px] flex items-center justify-center mb-8 relative">
+            <div 
+              className="flex items-center justify-center relative transition-all duration-300 ease-out"
+              style={{
+                height: `${scrollScale * 340}px`,
+                marginBottom: `${scrollScale * 2}rem`,
+              }}
+            >
               <div 
                 className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 transition-all ease-out will-change-transform sticky top-24 z-20 w-64 h-64 md:w-80 md:h-80"
                 style={{
