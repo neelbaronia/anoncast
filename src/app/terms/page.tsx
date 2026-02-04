@@ -56,7 +56,10 @@ export default function TermsPage() {
                     <p>
                       <strong>Market Effect:</strong> anoncast explicitly avoids competing with the original market for the 
                       written work. We provide direct links to the original blog posts in every generated episode and 
-                      encourage users to support original authors.
+                      encourage users to support original authors. Furthermore, anoncast only converts content that is 
+                      <strong> freely accessible</strong> on the public internet. We do not support or facilitate the 
+                      conversion of paywalled content, ensuring we do not impede a creator's ability to earn from their 
+                      proprietary work.
                     </p>
                   </div>
                   <div className="flex gap-3">
