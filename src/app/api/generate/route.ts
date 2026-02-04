@@ -50,6 +50,23 @@ export async function POST(request: NextRequest) {
       audioBuffers.push(buffer);
     }
 
+    // 3. Generate Outro
+    if (validSegments.length > 0) {
+      const outroVoiceId = validSegments[validSegments.length - 1].voiceId;
+      try {
+        // Add a 1s pause
+        const pauseBuffer = await generateSpeech(" . . . . . ", outroVoiceId);
+        audioBuffers.push(pauseBuffer);
+
+        // Add the outro text
+        const outroText = "This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening!";
+        const outroBuffer = await generateSpeech(outroText, outroVoiceId);
+        audioBuffers.push(outroBuffer);
+      } catch (outroError) {
+        console.warn('Failed to generate outro, skipping:', outroError);
+      }
+    }
+
     // Calculate total length
     const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
     const combinedBuffer = new Uint8Array(totalLength);
