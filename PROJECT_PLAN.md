@@ -20,9 +20,11 @@ A web platform that allows bloggers to convert their written content into audio 
 
 ### Next Tasks
 - [ ] **Vercel Deployment & Production Migration**
-  - Deploy Next.js app to Vercel
-  - Configure production domain (Namecheap)
-  - Switch Stripe to production (live) keys
+  - [x] Deploy Next.js app to Vercel
+  - [x] Configure production domain (Namecheap)
+  - [x] Switch Stripe to production (live) keys
+- [ ] **Check and prevent redundant blog generation**
+- [ ] **Specific domain testing** (Notion, etc.)
 - [ ] **Dynamic Scraping Upgrade**
   - Integrate Puppeteer/Playwright for Notion/Substack support
 - [ ] **Search & Discovery**
