@@ -31,6 +31,9 @@ A web platform that allows bloggers to convert their written content into audio 
   - Implement search functionality for the Generated Episodes list
 - [ ] **User Accounts & Storage**
   - Supabase Auth integration
+- [ ] **Automated Platform Syncing (Low Priority)**
+  - Implement Spotify/Apple API sync to fetch specific episode URLs
+  - Update database with direct platform links automatically
 
 ### Completed
 - [x] Manual editing of title and author in the Review step

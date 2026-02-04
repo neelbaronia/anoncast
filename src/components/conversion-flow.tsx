@@ -486,11 +486,23 @@ export function ConversionFlow() {
       }
       
       const scraped: ScrapedContent = result.data;
+      
+      // Extract domain as default author if scraper didn't find one
+      if (!scraped.author || scraped.author === 'Unknown Author') {
+        try {
+          const domain = new URL(url).hostname.replace('www.', '');
+          scraped.author = domain;
+        } catch (e) {
+          // Fallback to anoncast.net if URL is invalid
+          scraped.author = 'anoncast.net';
+        }
+      }
+
       setPreviewData(scraped);
       
       // Secondary fallback storage for the final card and persistence
       localStorage.setItem('last_title', scraped.title);
-      localStorage.setItem('last_author', scraped.author || 'Unknown Author');
+      localStorage.setItem('last_author', scraped.author);
       localStorage.setItem('last_image', scraped.featuredImage || '');
       localStorage.setItem('last_platform', scraped.platform);
       localStorage.setItem('last_url', scraped.url);
@@ -567,7 +579,7 @@ export function ConversionFlow() {
           segments: segmentsToUse,
           metadata: {
             title: previewData?.title || localStorage.getItem('last_title'),
-            author: 'anoncast.net',
+            author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
             image: previewData?.featuredImage || localStorage.getItem('last_image'),
             url: previewData?.url || localStorage.getItem('last_url'),
             firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
@@ -760,7 +772,14 @@ export function ConversionFlow() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
-                              <span>By anoncast.net</span>
+                              <span>By </span>
+                              <input
+                                type="text"
+                                value={previewData.author}
+                                onChange={(e) => handleMetadataChange('author', e.target.value)}
+                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
+                                placeholder="Author Name"
+                              />
                             </div>
                             <span>•</span>
                             <span>{totalWordCount} words</span>
@@ -846,7 +865,14 @@ export function ConversionFlow() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
-                              <span>By anoncast.net</span>
+                              <span>By </span>
+                              <input
+                                type="text"
+                                value={previewData.author}
+                                onChange={(e) => handleMetadataChange('author', e.target.value)}
+                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
+                                placeholder="Author Name"
+                              />
                             </div>
                             <span>•</span>
                             <span>{totalWordCount} words</span>
@@ -1245,7 +1271,14 @@ export function ConversionFlow() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
-                              <span>By anoncast.net</span>
+                              <span>By </span>
+                              <input
+                                type="text"
+                                value={previewData.author}
+                                onChange={(e) => handleMetadataChange('author', e.target.value)}
+                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
+                                placeholder="Author Name"
+                              />
                             </div>
                             <span>•</span>
                             <span>{totalWordCount} words</span>
@@ -1445,7 +1478,7 @@ export function ConversionFlow() {
                       {previewData?.title || "Untitled Article"}
                     </h3>
                     <p className="text-[10px] text-gray-500">
-                      {formatTime(audioDuration)} • anoncast.net
+                      {formatTime(audioDuration)} • {previewData?.author || localStorage.getItem('last_author') || "anoncast.net"}
                     </p>
                     {/* Mini progress bar */}
                     <div className="mt-2 flex items-center gap-2">
