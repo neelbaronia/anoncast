@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         .insert({
           show_id: GLOBAL_SHOW_ID,
           title: metadata?.title || 'Untitled Episode',
-          description: `${metadata?.firstSentence || ''}\n\nOriginal blog: ${metadata?.url || 'Unknown source'}\n\nMade with Anoncast: https://www.anoncast.net`,
+          description: `${metadata?.firstSentence || ''}\n\nOriginal blog: ${metadata?.url || 'Unknown source'}\n\nConvert your blog to audio at https://www.anoncast.net/ , or browse generated episodes at https://www.anoncast.net/generated`,
           audio_url: audioUrl,
           image_url: (metadata?.image || null)?.replace('.png', '.jpg'), // Ensure .jpg for fallback image
           duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
