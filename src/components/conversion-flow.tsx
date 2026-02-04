@@ -23,7 +23,8 @@ import {
   Lock,
   X,
   Square,
-  Download
+  Download,
+  Clock
 } from "lucide-react";
 
 import { BUY_MP3_LABEL } from "@/lib/constants";
