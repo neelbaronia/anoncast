@@ -481,7 +481,21 @@ export default function GeneratedBlogsPage() {
           </Card>
         </div>
       )}
-    </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-100 py-8 px-8 bg-white/80 backdrop-blur-sm mt-12">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            © 2026 anoncast
+          </span>
+          <div className="flex items-center gap-6">
+            <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</Link>
+            <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy</a>
+            <a href="mailto:nbaronia@gmail.com" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Support</a>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

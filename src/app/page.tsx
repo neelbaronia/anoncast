@@ -242,7 +242,7 @@ export default function Home() {
               © 2026 anoncast
             </span>
             <div className="flex items-center gap-6">
-              <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</a>
+              <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</Link>
               <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy</a>
               <a href="mailto:nbaronia@gmail.com" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Support</a>
             </div>
