@@ -100,6 +100,8 @@ export default function GeneratedBlogsPage() {
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [showPropagationModal, setShowPropagationModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{ title: string; url: string }>({ title: "", url: "" });
   const [audio] = useState<HTMLAudioElement | null>(typeof window !== 'undefined' ? new Audio() : null);
   const [shapes, setShapes] = useState<FloatingShape[]>([]);
 
@@ -187,6 +189,12 @@ export default function GeneratedBlogsPage() {
       setPlayingId(episode.id);
       audio.onended = () => setPlayingId(null);
     }
+  };
+
+  const handlePlatformClick = (e: React.MouseEvent, platform: string, url: string) => {
+    e.preventDefault();
+    setModalConfig({ title: platform, url });
+    setShowPropagationModal(true);
   };
 
   const formatDuration = (seconds: number) => {
@@ -353,6 +361,7 @@ export default function GeneratedBlogsPage() {
                     <div className="flex items-center gap-2">
                       <a 
                         href={episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title)}/episodes`} 
+                        onClick={(e) => handlePlatformClick(e, "Spotify", episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title)}/episodes`)}
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-[10px] font-bold text-[#1DB954] hover:opacity-80 transition-opacity flex items-center gap-1"
@@ -362,6 +371,7 @@ export default function GeneratedBlogsPage() {
                       <span className="text-gray-300 text-[10px]">•</span>
                       <a 
                         href={episode.apple_url || `https://podcasts.apple.com/us/search?term=${encodeURIComponent(episode.title)}`} 
+                        onClick={(e) => handlePlatformClick(e, "Apple Podcasts", episode.apple_url || `https://podcasts.apple.com/us/search?term=${encodeURIComponent(episode.title)}`)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] font-bold text-[#872ec4] hover:opacity-80 transition-opacity flex items-center gap-1"
@@ -426,6 +436,47 @@ export default function GeneratedBlogsPage() {
               >
                 <Pause className="w-4 h-4" />
               </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Propagation Modal */}
+      {showPropagationModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <Card className="w-full max-w-sm shadow-2xl border-gray-200 bg-white animate-in zoom-in-95 duration-300">
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-blue-600">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Almost there!</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  It can take <span className="font-bold text-gray-900">5-10 minutes</span> for new episodes to show up on {modalConfig.title}. 
+                  <br /><br />
+                  You can check the app directly in a few minutes, or continue to {modalConfig.title} now.
+                </p>
+                <div className="flex flex-col w-full gap-2">
+                  <Button 
+                    onClick={() => {
+                      if (modalConfig.url !== "#") {
+                        window.open(modalConfig.url, "_blank");
+                      }
+                      setShowPropagationModal(false);
+                    }}
+                    className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold"
+                  >
+                    Continue to {modalConfig.title}
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    onClick={() => setShowPropagationModal(false)}
+                    className="w-full text-gray-500 font-medium"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

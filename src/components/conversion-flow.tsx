@@ -110,6 +110,8 @@ export function ConversionFlow() {
   const [showId, setShowId] = useState<string | null>("00000000-0000-0000-0000-000000000000");
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [isBuyingDownload, setIsBuyingDownload] = useState(false);
+  const [showPropagationModal, setShowPropagationModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{ title: string; url: string }>({ title: "", url: "" });
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTestMode, setIsTestMode] = useState(false);
@@ -458,6 +460,12 @@ export function ConversionFlow() {
       alert('Failed to start payment process');
       setIsBuyingDownload(false);
     }
+  };
+
+  const handlePlatformClick = (e: React.MouseEvent, platform: string, url: string) => {
+    e.preventDefault();
+    setModalConfig({ title: platform, url });
+    setShowPropagationModal(true);
   };
 
   const getCurrentStepIndex = () => steps.findIndex((s) => s.id === currentStep);
@@ -1505,6 +1513,7 @@ export function ConversionFlow() {
               <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
                 <a 
                   href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
+                  onClick={(e) => handlePlatformClick(e, "Spotify", "https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO")}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 h-10 px-4 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-xl text-[11px] font-bold transition-all shadow-sm active:scale-95"
@@ -1514,6 +1523,7 @@ export function ConversionFlow() {
                 </a>
                 <a 
                   href="#" 
+                  onClick={(e) => handlePlatformClick(e, "Apple Podcasts", "#")}
                   className="flex items-center justify-center gap-2 h-10 px-4 bg-[#872ec4] hover:bg-[#9b3fe3] text-white rounded-xl text-[11px] font-bold transition-all shadow-sm active:scale-95"
                 >
                   <div className="w-4 h-4 bg-white rounded-full flex items-center justify-center p-0.5">
@@ -1599,6 +1609,47 @@ export function ConversionFlow() {
         </CardContent>
       </Card>
     </div>
+
+    {/* Propagation Modal */}
+    {showPropagationModal && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+        <Card className="w-full max-w-sm shadow-2xl border-gray-200 bg-white animate-in zoom-in-95 duration-300">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-4 text-blue-600">
+                <Clock className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Almost there!</h3>
+              <p className="text-sm text-gray-600 mb-6">
+                It can take <span className="font-bold text-gray-900">5-10 minutes</span> for new episodes to show up on {modalConfig.title}. 
+                <br /><br />
+                You can check the app directly in a few minutes, or continue to {modalConfig.title} now.
+              </p>
+              <div className="flex flex-col w-full gap-2">
+                <Button 
+                  onClick={() => {
+                    if (modalConfig.url !== "#") {
+                      window.open(modalConfig.url, "_blank");
+                    }
+                    setShowPropagationModal(false);
+                  }}
+                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold"
+                >
+                  Continue to {modalConfig.title}
+                </Button>
+                <Button 
+                  variant="ghost"
+                  onClick={() => setShowPropagationModal(false)}
+                  className="w-full text-gray-500 font-medium"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )}
   </div>
   );
 }
