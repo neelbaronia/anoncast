@@ -36,9 +36,8 @@ export async function POST(request: NextRequest) {
         const titleBuffer = await generateSpeech(metadata.title, introVoiceId);
         audioBuffers.push(titleBuffer);
         
-        // Add a 1s pause (ElevenLabs adds natural padding, but we can add another short break)
-        // We'll generate a "..." which typically creates a longer pause in natural speech
-        const pauseBuffer = await generateSpeech("... ...", introVoiceId);
+        // Add a 1s pause (We use a specific pause string that ElevenLabs interprets as a significant break)
+        const pauseBuffer = await generateSpeech(" . . . . . ", introVoiceId);
         audioBuffers.push(pauseBuffer);
       } catch (introError) {
         console.warn('Failed to generate title intro, skipping:', introError);
