@@ -182,13 +182,13 @@ export default function Home() {
           
           <div className="mt-12 flex flex-col items-center">
             {/* Show Image */}
-            <div className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000">
-              <img 
-                src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png" 
-                alt="Anoncast Show Art" 
-                className="w-full h-full object-cover"
-              />
-            </div>
+                        <div className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000">
+                          <img 
+                            src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+                            alt="Anoncast Show Art" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
 
             {/* Floating Platform Links */}
             <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">

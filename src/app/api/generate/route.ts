@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
           title: metadata?.title || 'Untitled Episode',
           description: `${metadata?.firstSentence || ''}\n\nOriginal blog: ${metadata?.url || 'Unknown source'}\n\nMade with Anoncast: https://www.anoncast.net`,
           audio_url: audioUrl,
-          image_url: metadata?.image || null, // Scraped blog image for this specific episode
+          image_url: (metadata?.image || null)?.replace('.png', '.jpg'), // Ensure .jpg for fallback image
           duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
           file_size: finalBuffer.length // Exact byte size for RSS enclosure
         });

@@ -113,6 +113,10 @@ export function ConversionFlow() {
   const [isTestMode, setIsTestMode] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const totalWordCount = textSegments.reduce((acc, s) => acc + s.text.split(/\s+/).filter(w => w.length > 0).length, 0);
+  const audioLengthMins = Math.ceil(totalWordCount / 150);
+  const readTimeMins = Math.ceil(totalWordCount / 200);
+
   // Check for payment success or existing preview on mount
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -401,7 +405,7 @@ export function ConversionFlow() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          amount: Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75,
+          amount: audioLengthMins * 0.75,
           title: previewData?.title
         }),
       });
@@ -766,9 +770,9 @@ export function ConversionFlow() {
                               />
                             </div>
                             <span>•</span>
-                            <span>{previewData.wordCount} words</span>
+                            <span>{totalWordCount} words</span>
                             <span>•</span>
-                            <span>{previewData.estimatedReadTime}</span>
+                            <span>{readTimeMins} min read</span>
                           </div>
                           <a 
                             href={previewData.url || "#"} 
@@ -847,7 +851,7 @@ export function ConversionFlow() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
                               <span>By </span>
                               <input
@@ -859,9 +863,9 @@ export function ConversionFlow() {
                               />
                             </div>
                             <span>•</span>
-                            <span>{previewData.wordCount} words</span>
+                            <span>{totalWordCount} words</span>
                             <span>•</span>
-                            <span>{previewData.estimatedReadTime}</span>
+                            <span>{readTimeMins} min read</span>
                           </div>
                         </div>
                       </div>
@@ -1145,15 +1149,15 @@ export function ConversionFlow() {
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                 <div className="flex gap-6 text-sm">
                   <div>
-                    <span className="text-gray-500">Estimated runtime: </span>
+                    <span className="text-gray-500">Estimated audio length: </span>
                     <span className="font-medium text-gray-900">
-                      {Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150)} min
+                      {audioLengthMins} min
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Generation cost: </span>
                     <span className="font-medium text-gray-900">
-                      ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
+                      ${(audioLengthMins * 0.75).toFixed(2)}
                     </span>
                     <span className="text-gray-400 text-xs ml-1">
                       ($0.75/min)
@@ -1253,7 +1257,7 @@ export function ConversionFlow() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
                               <span>By </span>
                               <input
@@ -1265,9 +1269,9 @@ export function ConversionFlow() {
                               />
                             </div>
                             <span>•</span>
-                            <span>{previewData.wordCount} words</span>
+                            <span>{totalWordCount} words</span>
                             <span>•</span>
-                            <span>{previewData.estimatedReadTime}</span>
+                            <span>{readTimeMins} min read</span>
                           </div>
                         </div>
                       </div>
@@ -1281,7 +1285,7 @@ export function ConversionFlow() {
                     <div className="p-3 bg-gray-50 rounded-lg text-left">
                       <div className="text-xs text-gray-500 mb-0.5">Total cost</div>
                       <div className="text-xl font-semibold text-gray-900">
-                        ${(Math.ceil(textSegments.reduce((acc, s) => acc + s.text.split(" ").length, 0) / 150) * 0.75).toFixed(2)}
+                        ${(audioLengthMins * 0.75).toFixed(2)}
                       </div>
                     </div>
                     <div className="flex flex-col items-center">
@@ -1423,22 +1427,22 @@ export function ConversionFlow() {
               </div>
 
               {/* Audio Card */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden max-w-md mx-auto shadow-sm">
-                <div className="relative">
+              <div className="border border-gray-200 rounded-xl overflow-hidden max-w-[280px] mx-auto shadow-sm">
+                <div className="relative aspect-square">
                   {previewData?.featuredImage ? (
                     <img 
                       src={previewData.featuredImage} 
                       alt="Featured" 
-                      className="w-full h-32 object-cover"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                      <div className="w-full h-32 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 flex items-center justify-center text-center relative overflow-hidden">
+                      <div className="w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 flex items-center justify-center text-center relative overflow-hidden">
                         {/* Decorative background elements */}
                         <div className="absolute top-0 left-0 w-full h-full opacity-20">
                           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500 rounded-full blur-3xl animate-pulse" />
                           <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full blur-3xl animate-pulse delay-700" />
                         </div>
-                        <h3 className="text-white font-bold text-lg leading-tight line-clamp-2 drop-shadow-lg z-10 px-4">
+                        <h3 className="text-white font-bold text-base leading-tight line-clamp-3 drop-shadow-lg z-10 px-4">
                           {previewData?.title || "Untitled Article"}
                         </h3>
                       </div>

@@ -40,30 +40,35 @@ export async function GET(
       })
       .ele('channel')
         .ele('title').txt(show.title).up()
-        .ele('description').txt(show.description || '').up()
-        .ele('link').txt(process.env.NEXT_PUBLIC_APP_URL || '').up()
+        .ele('description').txt(show.description || show.title).up()
+        .ele('link').txt('https://www.anoncast.net').up()
         .ele('language').txt('en-us').up()
         .ele('itunes:author').txt(show.author || 'Anoncast').up()
         .ele('itunes:owner')
           .ele('itunes:name').txt(show.author || 'Anoncast').up()
-          .ele('itunes:email').txt('nbaronia@gmail.com').up() // Your email for Spotify verification
+          .ele('itunes:email').txt('nbaronia@gmail.com').up()
         .up()
-        .ele('itunes:image', { href: show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png' }).up() 
+        .ele('itunes:image', { href: (show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').replace('.png', '.jpg') }).up() 
         .ele('itunes:category', { text: 'Technology' }).up()
+        .ele('itunes:explicit').txt('no').up()
+        .ele('itunes:type').txt('episodic').up()
+        .ele('itunes:summary').txt(show.description || show.title).up()
 
     // Add episodes to feed
     episodes.forEach((episode: any) => {
       const item = feed.ele('item')
         .ele('title').txt(episode.title).up()
-        .ele('description').txt(episode.description || '').up()
+        .ele('description').txt(episode.description || episode.title).up()
+        .ele('itunes:summary').txt(episode.description || episode.title).up()
         .ele('pubDate').txt(new Date(episode.published_at).toUTCString()).up()
         .ele('guid', { isPermaLink: 'false' }).txt(episode.id).up()
         .ele('itunes:author').txt(show.author || 'Anoncast').up()
         .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
-        .ele('itunes:image', { href: episode.image_url || show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png' }).up()
+        .ele('itunes:explicit').txt('no').up()
+        .ele('itunes:image', { href: (episode.image_url || show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').replace('.png', '.jpg') }).up()
         .ele('enclosure', {
           url: episode.audio_url,
-          length: episode.file_size?.toString() || '0',
+          length: (episode.file_size || (episode.duration * 16000) || 0).toString(),
           type: 'audio/mpeg'
         }).up()
       item.up();

@@ -255,7 +255,7 @@ export default function GeneratedBlogsPage() {
           {/* Show Image */}
           <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl overflow-hidden shadow-xl border-4 border-white flex-shrink-0">
             <img 
-              src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.png" 
+              src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
               alt="Anoncast Show Art" 
               className="w-full h-full object-cover"
             />
