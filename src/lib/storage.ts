@@ -35,8 +35,8 @@ export async function uploadToR2(
   try {
     await s3Client.send(command);
     
-    // Return the proxy URL instead of direct R2 link to satisfy Apple byte-range requirements
-    return `https://www.anoncast.net/api/audio/${key}`;
+    // Return the professional audio domain (must be Grey Clouded in Cloudflare for byte-ranges)
+    return `https://audio.anoncast.net/${key}`;
   } catch (error) {
     console.error("Error uploading to R2:", error);
     throw error;
