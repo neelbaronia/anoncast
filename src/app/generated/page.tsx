@@ -317,7 +317,7 @@ export default function GeneratedBlogsPage() {
                 {/* Content Section */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                    <span>{formatDate(episode.published_at)}</span>
+                    <span>Generated On {formatDate(episode.published_at)}</span>
                     <span>•</span>
                     <span>{formatDuration(episode.duration)}</span>
                   </div>
