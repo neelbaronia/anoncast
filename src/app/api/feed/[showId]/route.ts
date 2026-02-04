@@ -48,7 +48,7 @@ export async function GET(
           .ele('itunes:name').txt(show.author || 'Anoncast').up()
           .ele('itunes:email').txt('nbaronia@gmail.com').up()
         .up()
-        .ele('itunes:image', { href: (show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').replace('.png', '.jpg') }).up() 
+        .ele('itunes:image', { href: (show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').trim().replace('.png', '.jpg') }).up()
         .ele('itunes:category', { text: 'Technology' }).up()
         .ele('itunes:explicit').txt('no').up()
         .ele('itunes:type').txt('episodic').up()
@@ -65,9 +65,9 @@ export async function GET(
         .ele('itunes:author').txt(show.author || 'Anoncast').up()
         .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
         .ele('itunes:explicit').txt('no').up()
-        .ele('itunes:image', { href: (episode.image_url || show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').replace('.png', '.jpg') }).up()
+        .ele('itunes:image', { href: (episode.image_url || show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').trim().replace('.png', '.jpg') }).up()
         .ele('enclosure', {
-          url: episode.audio_url,
+          url: (episode.audio_url || '').trim(),
           length: (episode.file_size || (episode.duration * 16000) || 0).toString(),
           type: 'audio/mpeg'
         }).up()
