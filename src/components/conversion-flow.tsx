@@ -26,6 +26,8 @@ import {
   Download
 } from "lucide-react";
 
+import { BUY_MP3_LABEL } from "@/lib/constants";
+
 type Step = "input" | "review" | "generate" | "publish";
 
 interface VoiceOption {
@@ -1565,7 +1567,7 @@ export function ConversionFlow() {
                   ) : (
                     <Download className="w-4 h-4 mr-2 text-gray-500" />
                   )}
-                  Download Raw MP3 File
+                  {BUY_MP3_LABEL}
                 </Button>
               </div>
 

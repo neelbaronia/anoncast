@@ -19,6 +19,8 @@ A web platform that allows bloggers to convert their written content into audio 
 > **Last updated:** Jan 31, 2026
 
 ### Next Tasks
+- [ ] **Site Branding & Identity**
+  - Change favicon and browser tab thumbnail image
 - [ ] **Vercel Deployment & Production Migration**
   - [x] Deploy Next.js app to Vercel
   - [x] Configure production domain (Namecheap)

@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Pause, ExternalLink, Calendar, Clock, User, Download, CreditCard } from "lucide-react";
 import Link from "next/link";
+import { BUY_MP3_LABEL } from "@/lib/constants";
 
 interface FloatingShape {
   id: number;
@@ -389,7 +390,7 @@ export default function GeneratedBlogsPage() {
                       ) : (
                         <Download className="w-3 h-3 mr-1" />
                       )}
-                      Buy MP3 ($5)
+                      {BUY_MP3_LABEL}
                     </Button>
                   </div>
                 </div>
