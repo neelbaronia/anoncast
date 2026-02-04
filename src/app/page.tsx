@@ -81,9 +81,21 @@ function generateShapes(count: number): FloatingShape[] {
 export default function Home() {
   const [shapes, setShapes] = useState<FloatingShape[]>([]);
   const [resetKey, setResetKey] = useState(0);
+  const [scrollScale, setScrollScale] = useState(1);
 
   useEffect(() => {
     setShapes(generateShapes(12));
+
+    const handleScroll = () => {
+      // Calculate scale based on scroll position
+      // Shrink from 1.0 to 0.5 over 300px of scroll
+      const scrollY = window.scrollY;
+      const newScale = Math.max(0.5, 1 - (scrollY / 600));
+      setScrollScale(newScale);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogoClick = (e: React.MouseEvent) => {
@@ -167,8 +179,14 @@ export default function Home() {
         {/* Hero */}
         <section className="pt-16 pb-12 px-8">
           <div className="max-w-2xl mx-auto text-center">
-            {/* Show Image */}
-            <div className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto">
+            {/* Show Image with Scroll-to-Shrink Effect */}
+            <div 
+              className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto transition-transform ease-out will-change-transform"
+              style={{
+                transform: `scale(${scrollScale})`,
+                marginBottom: `${scrollScale * 3}rem`, // reduce margin as it shrinks
+              }}
+            >
               <img 
                 src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
                 alt="Anoncast Show Art" 
