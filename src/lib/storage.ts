@@ -35,14 +35,8 @@ export async function uploadToR2(
   try {
     await s3Client.send(command);
     
-    // Return the public URL if configured, otherwise a guess or empty
-    if (publicUrl) {
-      return `${publicUrl.replace(/\/$/, "")}/${key}`;
-    }
-    
-    // Fallback to the R2 dev domain if publicUrl is not set
-    // Note: This usually requires public access to be enabled on the bucket
-    return `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${key}`;
+    // Return the proxy URL instead of direct R2 link to satisfy Apple byte-range requirements
+    return `https://www.anoncast.net/api/audio/${key}`;
   } catch (error) {
     console.error("Error uploading to R2:", error);
     throw error;
