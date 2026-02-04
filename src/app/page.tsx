@@ -88,9 +88,9 @@ export default function Home() {
 
     const handleScroll = () => {
       // Calculate scale based on scroll position
-      // Shrink from 1.0 to 0.5 over 300px of scroll
+      // Shrink from 1.0 to 0.5 over 400px of scroll
       const scrollY = window.scrollY;
-      const newScale = Math.max(0.5, 1 - (scrollY / 600));
+      const newScale = Math.max(0.5, 1 - (scrollY / 400));
       setScrollScale(newScale);
     };
 
@@ -177,21 +177,23 @@ export default function Home() {
         </header>
 
         {/* Hero */}
-        <section className="pt-16 pb-12 px-8">
+        <section className="pt-16 pb-12 px-8 relative">
           <div className="max-w-2xl mx-auto text-center">
             {/* Show Image with Scroll-to-Shrink Effect */}
-            <div 
-              className="mb-12 w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto transition-transform ease-out will-change-transform"
-              style={{
-                transform: `scale(${scrollScale})`,
-                marginBottom: `${scrollScale * 3}rem`, // reduce margin as it shrinks
-              }}
-            >
-              <img 
-                src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
-                alt="Anoncast Show Art" 
-                className="w-full h-full object-cover"
-              />
+            <div className="h-[340px] flex items-center justify-center mb-8 relative">
+              <div 
+                className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 transition-all ease-out will-change-transform sticky top-24 z-20 w-64 h-64 md:w-80 md:h-80"
+                style={{
+                  transform: `scale(${scrollScale})`,
+                  opacity: 0.7 + (scrollScale * 0.3),
+                }}
+              >
+                <img 
+                  src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+                  alt="Anoncast Show Art" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
             <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900">
               Turn Your Blog Into a Podcast
