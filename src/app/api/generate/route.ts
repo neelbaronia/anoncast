@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     if (metadata) {
       const tags: NodeID3.Tags = {
         title: metadata.title,
-        artist: metadata.author,
+        artist: 'anoncast.net',
         album: 'Anoncast',
       };
 

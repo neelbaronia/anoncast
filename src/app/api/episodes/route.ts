@@ -23,7 +23,7 @@ export async function GET() {
     const formattedEpisodes = data.map((ep: any) => ({
       ...ep,
       show_title: ep.shows?.title,
-      show_author: ep.shows?.author,
+      show_author: 'anoncast.net',
       display_image: ep.image_url || ep.shows?.image_url // Prioritize episode image
     }));
 

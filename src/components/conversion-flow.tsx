@@ -567,7 +567,7 @@ export function ConversionFlow() {
           segments: segmentsToUse,
           metadata: {
             title: previewData?.title || localStorage.getItem('last_title'),
-            author: previewData?.author || localStorage.getItem('last_author'),
+            author: 'anoncast.net',
             image: previewData?.featuredImage || localStorage.getItem('last_image'),
             url: previewData?.url || localStorage.getItem('last_url'),
             firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
@@ -760,14 +760,7 @@ export function ConversionFlow() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
-                              <span>By </span>
-                              <input
-                                type="text"
-                                value={previewData.author}
-                                onChange={(e) => handleMetadataChange('author', e.target.value)}
-                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
-                                placeholder="Author Name"
-                              />
+                              <span>By anoncast.net</span>
                             </div>
                             <span>•</span>
                             <span>{totalWordCount} words</span>
@@ -853,14 +846,7 @@ export function ConversionFlow() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
-                              <span>By </span>
-                              <input
-                                type="text"
-                                value={previewData.author}
-                                onChange={(e) => handleMetadataChange('author', e.target.value)}
-                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
-                                placeholder="Author Name"
-                              />
+                              <span>By anoncast.net</span>
                             </div>
                             <span>•</span>
                             <span>{totalWordCount} words</span>
@@ -1259,14 +1245,7 @@ export function ConversionFlow() {
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mb-1">
                             <div className="flex items-center">
-                              <span>By </span>
-                              <input
-                                type="text"
-                                value={previewData.author}
-                                onChange={(e) => handleMetadataChange('author', e.target.value)}
-                                className="bg-transparent border-none focus:outline-none focus:ring-0 text-xs text-gray-500 p-0 ml-1 w-32 placeholder:text-gray-400"
-                                placeholder="Author Name"
-                              />
+                              <span>By anoncast.net</span>
                             </div>
                             <span>•</span>
                             <span>{totalWordCount} words</span>
@@ -1466,7 +1445,7 @@ export function ConversionFlow() {
                       {previewData?.title || "Untitled Article"}
                     </h3>
                     <p className="text-[10px] text-gray-500">
-                      {formatTime(audioDuration)} • {previewData?.author || "Unknown Author"}
+                      {formatTime(audioDuration)} • anoncast.net
                     </p>
                     {/* Mini progress bar */}
                     <div className="mt-2 flex items-center gap-2">

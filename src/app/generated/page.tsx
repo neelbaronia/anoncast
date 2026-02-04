@@ -330,7 +330,7 @@ export default function GeneratedBlogsPage() {
                     <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
                       <User className="w-2 h-2 text-gray-500" />
                     </div>
-                    <span className="text-xs text-gray-500 truncate">{episode.show_author || 'Anoncast'}</span>
+                    <span className="text-xs text-gray-500 truncate">anoncast.net</span>
                     {getSourceUrl(episode.description) && (
                       <>
                         <span className="text-gray-300 text-xs">•</span>
