@@ -35,8 +35,9 @@ export async function uploadToR2(
   try {
     await s3Client.send(command);
     
-    // Return the professional audio domain (must be Grey Clouded in Cloudflare for byte-ranges)
-    return `https://audio.anoncast.net/${key}`;
+    // Use the direct R2 Public Development URL. 
+    // This is the only one guaranteed to support byte-ranges without DNS configuration issues.
+    return `https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/${key}`;
   } catch (error) {
     console.error("Error uploading to R2:", error);
     throw error;
