@@ -480,7 +480,8 @@ export function ConversionFlow() {
   };
 
   const handleFetch = async () => {
-    if (!url) return;
+    const currentUrl = urlInputRef.current?.value || url;
+    if (!currentUrl) return;
     setIsLoading(true);
     setScrapeError(null);
     
@@ -488,7 +489,7 @@ export function ConversionFlow() {
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url: currentUrl }),
       });
       
       const result = await response.json();
@@ -702,8 +703,12 @@ export function ConversionFlow() {
                     ref={urlInputRef}
                     defaultValue={url}
                     onChange={(e) => {
-                      setUrl(e.target.value);
-                      if (previewData) handleClearPreview();
+                      const newUrl = e.target.value;
+                      setUrl(newUrl);
+                      if (previewData) {
+                        setPreviewData(null);
+                        // Don't clear the url state here, just the preview
+                      }
                     }}
                     className="flex-1 h-11 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
                   />
