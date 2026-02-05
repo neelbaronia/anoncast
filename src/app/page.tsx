@@ -82,14 +82,26 @@ export default function Home() {
   const [shapes, setShapes] = useState<FloatingShape[]>([]);
   const [resetKey, setResetKey] = useState(0);
   const [scrollScale, setScrollScale] = useState(1);
+  const [containerHeight, setContainerHeight] = useState(340);
+  const [marginBottom, setMarginBottom] = useState(8);
 
   useEffect(() => {
     setShapes(generateShapes(12));
 
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      const newScale = Math.max(0.5, 1 - (scrollY / 400));
+      
+      // Shrink from 1.0 to 0.5 over 300px of scroll
+      const newScale = Math.max(0.5, 1 - (scrollY / 600));
       setScrollScale(newScale);
+
+      // Scale container height from 340px to 170px (50% of original)
+      const newHeight = Math.max(170, 340 - (scrollY / 2));
+      setContainerHeight(newHeight);
+
+      // Scale margin-bottom from 8 (32px) to 4 (16px)
+      const newMarginBottom = Math.max(4, 8 - (scrollY / 150));
+      setMarginBottom(newMarginBottom);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -153,7 +165,7 @@ export default function Home() {
       {/* Content Area */}
       <div className="relative z-10">
         {/* Header */}
-        <header className="py-6 px-8 border-b border-gray-100 bg-white sticky top-0 z-50">
+        <header className="py-6 px-8 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <a 
               href="/" 
@@ -173,16 +185,21 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Scroll & Land Wrapper */}
-        <div className="relative">
-          {/* Sticky Background Image Layer */}
-          <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none z-0">
-            <div className="sticky top-32 flex justify-center h-[calc(100vh-128px)] items-start">
+        {/* Hero Section */}
+        <section className="pt-16 pb-12 px-8 relative">
+          <div className="max-w-2xl mx-auto text-center">
+            {/* Show Image with Scroll-to-Shrink Effect */}
+            <div 
+              className="flex items-center justify-center relative mx-auto transition-all ease-out will-change-transform"
+              style={{
+                height: `${containerHeight}px`,
+                marginBottom: `${marginBottom}rem`,
+              }}
+            >
               <div 
-                className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white transition-all ease-out will-change-transform w-64 h-64 md:w-80 md:h-80"
+                className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto transition-all ease-out will-change-transform"
                 style={{
                   transform: `scale(${scrollScale})`,
-                  opacity: 0.7 + (scrollScale * 0.3),
                 }}
               >
                 <img 
@@ -192,56 +209,39 @@ export default function Home() {
                 />
               </div>
             </div>
+            
+            <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900">
+              Turn Your Blog Into a Podcast
+            </h1>
+            <p className="text-lg text-gray-600">
+              Paste a link to any blog post or essay. We'll transform it into studio-quality audio you can share with the world.
+            </p>
           </div>
+        </section>
 
-          <div className="relative z-10">
-            {/* Hero */}
-            <section className="pt-16 pb-12 px-8 relative">
-              <div className="max-w-2xl mx-auto text-center">
-                {/* Spacer for sticky image */}
-                <div 
-                  className="flex items-center justify-center relative transition-all duration-300 ease-out pointer-events-none"
-                  style={{
-                    height: `${scrollScale * 340}px`,
-                    marginBottom: `${scrollScale * 2}rem`,
-                  }}
-                />
-                <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900">
-                  Turn Your Blog Into a Podcast
-                </h1>
-                <p className="text-lg text-gray-600">
-                  Paste a link to any blog post or essay. We'll transform it into studio-quality audio you can share with the world.
-                </p>
-              </div>
-            </section>
+        {/* Conversion Flow */}
+        <section className="px-8 pb-12">
+          <ConversionFlow key={resetKey} />
+          
+          <div className="mt-12 flex flex-col items-center">
+            {/* Large Show Image (Fixed Position) */}
+            <div className="w-80 h-80 md:w-96 md:h-96 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mb-12">
+              <img 
+                src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+                alt="Anoncast Show Art" 
+                className="w-full h-full object-cover"
+              />
+            </div>
 
-            {/* Conversion Flow */}
-            <section className="px-8 pb-12">
-              <div className="bg-white rounded-3xl">
-                <ConversionFlow key={resetKey} />
-              </div>
-              
-              <div className="mt-12 flex flex-col items-center">
-                {/* Final Landing Spot Gap for the Show Image */}
-                <div className="h-64 md:h-80 w-full mb-12 flex items-center justify-center relative">
-                  {/* The sticky image will land here at the end of the scroll wrapper */}
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        {/* Floating Platform Links - Outside the Landing Wrapper */}
-        <section className="px-8 pb-12 relative z-20 bg-white">
-          <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="bg-white/80 backdrop-blur-sm px-8 py-4 rounded-full flex flex-wrap items-center justify-center gap-4 border border-gray-50 shadow-sm">
+            {/* Floating Platform Links */}
+            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
               <a 
                 href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="group flex items-center gap-3 px-6 py-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
               >
-                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.22.361-.692.472-1.053.252-2.903-1.774-6.558-2.176-10.865-1.192-.413.094-.827-.163-.921-.575-.094-.413.163-.827.575-.921 4.71-1.077 8.74-.623 12.012 1.381.361.22.472.692.252 1.055zm1.464-3.259c-.276.449-.863.593-1.313.317-3.32-2.039-8.381-2.634-12.308-1.442-.505.153-1.036-.134-1.189-.639-.153-.505.134-1.036.639-1.189 4.49-1.362 10.066-.704 13.854 1.624.449.276.593.863.317 1.329zm.126-3.414c-3.982-2.366-10.551-2.585-14.364-1.428-.611.186-1.258-.168-1.444-.779-.186-.611.168-1.258.779-1.444 4.385-1.33 11.625-1.078 16.195 1.636.55.326.732 1.033.406 1.583-.326.551-1.034.733-1.583.406h-.001z"/>
                 </svg>
                 Listen on Spotify
