@@ -154,7 +154,7 @@ export default function Home() {
       </div>
 
       {/* Sticky Background Image Layer */}
-      <div className="absolute inset-x-0 top-0 bottom-[1200px] pointer-events-none z-0">
+      <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none z-0">
         <div className="sticky top-24 flex justify-center h-screen items-start pt-16">
           <div 
             className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 transition-all ease-out will-change-transform w-64 h-64 md:w-80 md:h-80"
@@ -196,7 +196,7 @@ export default function Home() {
         </header>
 
         {/* Hero */}
-        <section className="pt-16 pb-12 px-8 relative bg-white">
+        <section className="pt-16 pb-12 px-8 relative">
           <div className="max-w-2xl mx-auto text-center">
             {/* Show Image with Scroll-to-Shrink Effect */}
             <div 
@@ -218,8 +218,10 @@ export default function Home() {
         </section>
 
         {/* Conversion Flow */}
-        <section className="px-8 pb-12 relative z-10 bg-white">
-          <ConversionFlow key={resetKey} />
+        <section className="px-8 pb-12 relative z-10">
+          <div className="bg-white rounded-3xl">
+            <ConversionFlow key={resetKey} />
+          </div>
           
           <div className="mt-12 flex flex-col items-center">
             {/* Landing Spot Gap for the Show Image */}
@@ -228,46 +230,48 @@ export default function Home() {
             </div>
 
             {/* Floating Platform Links */}
-            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 relative z-10 bg-white py-4 w-full">
-              <a 
-                href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 px-6 py-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.22.361-.692.472-1.053.252-2.903-1.774-6.558-2.176-10.865-1.192-.413.094-.827-.163-.921-.575-.094-.413.163-.827.575-.921 4.71-1.077 8.74-.623 12.012 1.381.361.22.472.692.252 1.055zm1.464-3.259c-.276.449-.863.593-1.313.317-3.32-2.039-8.381-2.634-12.308-1.442-.505.153-1.036-.134-1.189-.639-.153-.505.134-1.036.639-1.189 4.49-1.362 10.066-.704 13.854 1.624.449.276.593.863.317 1.329zm.126-3.414c-3.982-2.366-10.551-2.585-14.364-1.428-.611.186-1.258-.168-1.444-.779-.186-.611.168-1.258.779-1.444 4.385-1.33 11.625-1.078 16.195 1.636.55.326.732 1.033.406 1.583-.326.551-1.034.733-1.583.406h-.001z"/>
-                </svg>
-                Listen on Spotify
-              </a>
+            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 relative z-10 py-4 w-full">
+              <div className="bg-white/80 backdrop-blur-sm px-8 py-4 rounded-full flex flex-wrap items-center justify-center gap-4">
+                <a 
+                  href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 px-6 py-3 bg-[#1DB954] hover:bg-[#1ed760] text-white rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.494 17.306c-.22.361-.692.472-1.053.252-2.903-1.774-6.558-2.176-10.865-1.192-.413.094-.827-.163-.921-.575-.094-.413.163-.827.575-.921 4.71-1.077 8.74-.623 12.012 1.381.361.22.472.692.252 1.055zm1.464-3.259c-.276.449-.863.593-1.313.317-3.32-2.039-8.381-2.634-12.308-1.442-.505.153-1.036-.134-1.189-.639-.153-.505.134-1.036.639-1.189 4.49-1.362 10.066-.704 13.854 1.624.449.276.593.863.317 1.329zm.126-3.414c-3.982-2.366-10.551-2.585-14.364-1.428-.611.186-1.258-.168-1.444-.779-.186-.611.168-1.258.779-1.444 4.385-1.33 11.625-1.078 16.195 1.636.55.326.732 1.033.406 1.583-.326.551-1.034.733-1.583.406h-.001z"/>
+                  </svg>
+                  Listen on Spotify
+                </a>
 
-              <a 
-                href="https://podcasts.apple.com/us/podcast/anoncast/id1874480499" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#872ec4]">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-12.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .82-.67 1.5-1.5 1.5s-1.5-.68-1.5-1.5zm3.5 1.5v7h-1v-4h-1v4h-1v-7h3zm-3.5 1.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .82-.67 1.5-1.5 1.5s-1.5-.68-1.5-1.5z"/>
-                  <path d="M12 13.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-4c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/>
-                  <path d="M12 17c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>
-                </svg>
-                Apple Podcasts
-              </a>
+                <a 
+                  href="https://podcasts.apple.com/us/podcast/anoncast/id1874480499" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#872ec4]">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-12.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .82-.67 1.5-1.5 1.5s-1.5-.68-1.5-1.5zm3.5 1.5v7h-1v-4h-1v4h-1v-7h3zm-3.5 1.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .82-.67 1.5-1.5 1.5s-1.5-.68-1.5-1.5z"/>
+                    <path d="M12 13.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zm0-4c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5z"/>
+                    <path d="M12 17c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>
+                  </svg>
+                  Apple Podcasts
+                </a>
 
-              <a 
-                href="https://www.anoncast.net/api/feed/00000000-0000-0000-0000-000000000000" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#f26522]">
-                  <path d="M6.18,15.64A2.18,2.18,0,0,1,8.36,17.82,2.18,2.18,0,0,1,6.18,20,2.18,2.18,0,0,1,4,17.82,2.18,2.18,0,0,1,6.18,15.64Z"/>
-                  <path d="M4,4.44V8.05a12.15,12.15,0,0,1,11.51,11.51h3.61A15.72,15.72,0,0,0,4,4.44Z"/>
-                  <path d="M4,10.41v3.41a5.93,5.93,0,0,1,5.77,5.77h3.41A9.3,9.3,0,0,0,4,10.41Z"/>
-                </svg>
-                RSS Feed
-              </a>
+                <a 
+                  href="https://www.anoncast.net/api/feed/00000000-0000-0000-0000-000000000000" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 px-6 py-3 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-full font-semibold transition-all shadow-md hover:shadow-xl hover:scale-105 active:scale-95"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-[#f26522]">
+                    <path d="M6.18,15.64A2.18,2.18,0,0,1,8.36,17.82,2.18,2.18,0,0,1,6.18,20,2.18,2.18,0,0,1,4,17.82,2.18,2.18,0,0,1,6.18,15.64Z"/>
+                    <path d="M4,4.44V8.05a12.15,12.15,0,0,1,11.51,11.51h3.61A15.72,15.72,0,0,0,4,4.44Z"/>
+                    <path d="M4,10.41v3.41a5.93,5.93,0,0,1,5.77,5.77h3.41A9.3,9.3,0,0,0,4,10.41Z"/>
+                  </svg>
+                  RSS Feed
+                </a>
+              </div>
             </div>
           </div>
         </section>
