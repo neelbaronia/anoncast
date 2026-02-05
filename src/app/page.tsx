@@ -82,8 +82,8 @@ export default function Home() {
   const [shapes, setShapes] = useState<FloatingShape[]>([]);
   const [resetKey, setResetKey] = useState(0);
   const [scrollScale, setScrollScale] = useState(1);
-  const [containerHeight, setContainerHeight] = useState(340);
-  const [marginBottom, setMarginBottom] = useState(8);
+  const [containerHeight, setContainerHeight] = useState(320);
+  const [marginBottom, setMarginBottom] = useState(2);
 
   useEffect(() => {
     setShapes(generateShapes(12));
@@ -91,16 +91,16 @@ export default function Home() {
     const handleScroll = () => {
       const scrollY = window.scrollY;
       
-      // Shrink from 1.0 to 0.5 over 300px of scroll
+      // Shrink from 1.0 to 0.5 over 600px of scroll
       const newScale = Math.max(0.5, 1 - (scrollY / 600));
       setScrollScale(newScale);
 
-      // Scale container height from 340px to 170px (50% of original)
-      const newHeight = Math.max(170, 340 - (scrollY / 2));
+      // Scale container height from 320px to 160px (50% of original)
+      const newHeight = Math.max(160, 320 - (scrollY / 2));
       setContainerHeight(newHeight);
 
-      // Scale margin-bottom from 8 (32px) to 4 (16px)
-      const newMarginBottom = Math.max(4, 8 - (scrollY / 150));
+      // Scale margin-bottom from 2rem to 0.5rem
+      const newMarginBottom = Math.max(0.5, 2 - (scrollY / 100));
       setMarginBottom(newMarginBottom);
     };
 
