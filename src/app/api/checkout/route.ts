@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-// Use Stripe Secret Key from environment variables
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+// Use sandbox keys if available locally, otherwise fallback to main keys
+const stripeSecretKey = process.env.SANDBOX_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
 const stripe = new Stripe(stripeSecretKey!);
 
 const isTestMode = stripeSecretKey?.startsWith('sk_test_');
