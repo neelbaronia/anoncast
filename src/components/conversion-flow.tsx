@@ -83,7 +83,7 @@ const steps = [
   { id: "publish" as Step, label: "Publish", icon: Share2 },
 ];
 
-const DEMO_MODE = true; // Set to true to skip Stripe/ElevenLabs and use existing audio for demo video
+const DEMO_MODE = false; // Set to true to skip Stripe/ElevenLabs and use existing audio for demo video
 
 const getFirstSentence = (text: string) => {
   if (!text) return "";
