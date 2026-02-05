@@ -111,8 +111,26 @@ export default function TermsPage() {
           </div>
         </div>
 
-        <div className="mt-8 text-center text-gray-400 text-xs">
-          <p>© 2026 anoncast. This is a generic template and does not constitute legal advice.</p>
+        <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-gray-400">
+              Made with ❤️, 🤖, and 😎 by{" "}
+              <a 
+                href="https://www.nbaronia.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-900 font-medium transition-colors underline decoration-gray-200 underline-offset-4"
+              >
+                nbaronia
+              </a>
+            </p>
+            <span className="text-xs text-gray-300">
+              © 2026 anoncast
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-300 italic text-center max-w-sm">
+            This is a generic template and does not constitute legal advice.
+          </p>
         </div>
       </div>
     </main>

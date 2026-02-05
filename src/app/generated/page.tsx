@@ -484,15 +484,29 @@ export default function GeneratedBlogsPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-8 px-8 bg-white/80 backdrop-blur-sm mt-12">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <span className="text-sm text-gray-500">
-            © 2026 anoncast
-          </span>
+      <footer className="border-t border-gray-100 py-12 px-8 bg-white/80 backdrop-blur-sm mt-12">
+        <div className="max-w-5xl mx-auto flex flex-col items-center gap-6">
           <div className="flex items-center gap-6">
             <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Terms</Link>
             <a href="#" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Privacy</a>
             <a href="mailto:nbaronia@gmail.com" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">Support</a>
+          </div>
+          
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-gray-400">
+              Made with ❤️, 🤖, and 😎 by{" "}
+              <a 
+                href="https://www.nbaronia.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-900 font-medium transition-colors underline decoration-gray-200 underline-offset-4"
+              >
+                nbaronia
+              </a>
+            </p>
+            <span className="text-xs text-gray-300">
+              © 2026 anoncast
+            </span>
           </div>
         </div>
       </footer>
