@@ -134,7 +134,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white relative overflow-hidden">
       {/* Floating Shapes */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         {shapes.map((shape) => (
           <div
             key={shape.id}
@@ -190,14 +190,14 @@ export default function Home() {
           <div className="max-w-2xl mx-auto text-center">
             {/* Show Image with Scroll-to-Shrink Effect */}
             <div 
-              className="flex items-center justify-center relative mx-auto transition-all ease-out will-change-transform"
+              className="flex items-center justify-center relative mx-auto will-change-transform"
               style={{
                 height: `${containerHeight}px`,
                 marginBottom: `${marginBottom}rem`,
               }}
             >
               <div 
-                className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto transition-all ease-out will-change-transform"
+                className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white mx-auto will-change-transform"
                 style={{
                   transform: `scale(${scrollScale})`,
                 }}
