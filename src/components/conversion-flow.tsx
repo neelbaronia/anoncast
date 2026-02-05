@@ -83,6 +83,8 @@ const steps = [
   { id: "publish" as Step, label: "Publish", icon: Share2 },
 ];
 
+const DEMO_MODE = true; // Set to true to skip Stripe/ElevenLabs and use existing audio for demo video
+
 const getFirstSentence = (text: string) => {
   if (!text) return "";
   const match = text.match(/^.*?[.!?](?:\s|$)/);
@@ -408,6 +410,15 @@ export function ConversionFlow() {
   };
 
   const handlePayment = async () => {
+    if (DEMO_MODE) {
+      setPaymentProcessing(true);
+      setTimeout(() => {
+        setPaymentProcessing(false);
+        setCurrentStep('generate');
+        handleGenerate();
+      }, 1000);
+      return;
+    }
     setPaymentProcessing(true);
     try {
       // Save state to localStorage so we can resume after redirect
@@ -447,6 +458,22 @@ export function ConversionFlow() {
 
   const handleBuyDownload = async () => {
     if (!generatedAudioUrl) return;
+
+    if (DEMO_MODE) {
+      setIsBuyingDownload(true);
+      setTimeout(() => {
+        setIsBuyingDownload(false);
+        const title = previewData?.title || localStorage.getItem('last_title') || 'audio';
+        const a = document.createElement('a');
+        a.href = generatedAudioUrl;
+        a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, 1000);
+      return;
+    }
+
     setIsBuyingDownload(true);
     try {
       localStorage.setItem('pending_download_url', generatedAudioUrl);
@@ -599,33 +626,66 @@ export function ConversionFlow() {
     }, 500);
     
     try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          segments: segmentsToUse,
-          metadata: {
-            title: previewData?.title || localStorage.getItem('last_title'),
-            author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
-            image: previewData?.featuredImage || localStorage.getItem('last_image'),
-            url: previewData?.url || localStorage.getItem('last_url'),
-            firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
-          }
-        }),
-      });
-      
-      if (!response.ok) {
-        clearInterval(progressInterval);
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to generate audio');
+      let blob: Blob;
+      let newShowId = null;
+
+      if (DEMO_MODE) {
+        // Fetch most recent episode for demo purposes
+        const episodesRes = await fetch('/api/episodes');
+        const episodesData = await episodesRes.json();
+        
+        if (episodesData.success && episodesData.data.length > 0) {
+          const latest = episodesData.data[0];
+          const audioRes = await fetch(latest.audio_url);
+          blob = await audioRes.blob();
+          newShowId = latest.show_id;
+          
+          // Update preview data to match the "generated" episode for realism
+          setPreviewData({
+            title: latest.title,
+            author: latest.show_author || 'anoncast.net',
+            featuredImage: latest.display_image || latest.image_url,
+            url: latest.description.match(/Original blog: (https?:\/\/[^\s\n]+)/)?.[1] || '',
+            paragraphs: [], // Not needed for publish step
+            content: '',
+            wordCount: 0,
+            estimatedReadTime: '',
+            publishDate: latest.published_at,
+            platform: 'Custom'
+          });
+        } else {
+          throw new Error('No episodes found for demo mode');
+        }
+      } else {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            segments: segmentsToUse,
+            metadata: {
+              title: previewData?.title || localStorage.getItem('last_title'),
+              author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
+              image: previewData?.featuredImage || localStorage.getItem('last_image'),
+              url: previewData?.url || localStorage.getItem('last_url'),
+              firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          clearInterval(progressInterval);
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to generate audio');
+        }
+
+        blob = await response.blob();
+        newShowId = response.headers.get('X-Show-Id');
       }
-      
-      const blob = await response.blob();
+
       const audioUrl = URL.createObjectURL(blob);
       setGeneratedAudioUrl(audioUrl);
       
-      // Capture showId from headers for RSS feed
-      const newShowId = response.headers.get('X-Show-Id');
+      // Capture showId from headers or demo data for RSS feed
       if (newShowId) {
         setShowId(newShowId);
         localStorage.setItem('last_show_id', newShowId);
