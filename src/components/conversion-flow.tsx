@@ -92,6 +92,7 @@ const getFirstSentence = (text: string) => {
 export function ConversionFlow() {
   const [currentStep, setCurrentStep] = useState<Step>("input");
   const [url, setUrl] = useState("");
+  const urlInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
@@ -553,6 +554,9 @@ export function ConversionFlow() {
   const handleClearPreview = () => {
     setPreviewData(null);
     setUrl("");
+    if (urlInputRef.current) {
+      urlInputRef.current.value = "";
+    }
     localStorage.removeItem('pending_preview');
     localStorage.removeItem('pending_segments');
     localStorage.removeItem('pending_step');
@@ -695,7 +699,8 @@ export function ConversionFlow() {
                   <Input
                     type="url"
                     placeholder="https://your-blog.com/article"
-                    value={url}
+                    ref={urlInputRef}
+                    defaultValue={url}
                     onChange={(e) => {
                       setUrl(e.target.value);
                       if (previewData) handleClearPreview();
@@ -1589,6 +1594,9 @@ export function ConversionFlow() {
                   onClick={() => {
                     setCurrentStep("input");
                     setUrl("");
+                    if (urlInputRef.current) {
+                      urlInputRef.current.value = "";
+                    }
                     setGenerationProgress(0);
                     setPreviewData(null);
                     localStorage.removeItem('pending_preview');
