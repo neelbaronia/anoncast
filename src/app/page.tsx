@@ -153,10 +153,29 @@ export default function Home() {
         ))}
       </div>
 
+      {/* Sticky Background Image Layer */}
+      <div className="absolute inset-x-0 top-0 bottom-[1200px] pointer-events-none z-0">
+        <div className="sticky top-24 flex justify-center h-screen items-start pt-16">
+          <div 
+            className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 transition-all ease-out will-change-transform w-64 h-64 md:w-80 md:h-80"
+            style={{
+              transform: `scale(${scrollScale})`,
+              opacity: 0.7 + (scrollScale * 0.3),
+            }}
+          >
+            <img 
+              src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+              alt="Anoncast Show Art" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
-        <header className="py-6 px-8 border-b border-gray-100 bg-white/80 backdrop-blur-sm">
+        <header className="py-6 px-8 border-b border-gray-100 bg-white sticky top-0 z-50">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <a 
               href="/" 
@@ -177,46 +196,39 @@ export default function Home() {
         </header>
 
         {/* Hero */}
-        <section className="pt-16 pb-12 px-8 relative">
+        <section className="pt-16 pb-12 px-8 relative bg-white">
           <div className="max-w-2xl mx-auto text-center">
             {/* Show Image with Scroll-to-Shrink Effect */}
             <div 
-              className="flex items-center justify-center relative transition-all duration-300 ease-out"
+              className="flex items-center justify-center relative transition-all duration-300 ease-out pointer-events-none"
               style={{
                 height: `${scrollScale * 340}px`,
                 marginBottom: `${scrollScale * 2}rem`,
               }}
             >
-              <div 
-                className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 transition-all ease-out will-change-transform sticky top-24 z-20 w-64 h-64 md:w-80 md:h-80"
-                style={{
-                  transform: `scale(${scrollScale})`,
-                  opacity: 0.7 + (scrollScale * 0.3),
-                }}
-              >
-                <img 
-                  src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
-                  alt="Anoncast Show Art" 
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              {/* This is now a placeholder for the sticky background image */}
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900">
+            <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900 relative z-10">
               Turn Your Blog Into a Podcast
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg text-gray-600 relative z-10">
               Paste a link to any blog post or essay. We'll transform it into studio-quality audio you can share with the world.
             </p>
           </div>
         </section>
 
         {/* Conversion Flow */}
-        <section className="px-8 pb-12">
+        <section className="px-8 pb-12 relative z-10 bg-white">
           <ConversionFlow key={resetKey} />
           
           <div className="mt-12 flex flex-col items-center">
+            {/* Landing Spot Gap for the Show Image */}
+            <div className="h-64 md:h-80 w-full mb-12 flex items-center justify-center relative">
+              {/* The sticky image will reside here once the component scrolls past */}
+            </div>
+
             {/* Floating Platform Links */}
-            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 relative z-10 bg-white py-4 w-full">
               <a 
                 href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
                 target="_blank" 
