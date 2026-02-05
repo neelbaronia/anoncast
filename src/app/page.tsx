@@ -153,25 +153,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Sticky Background Image Layer */}
-      <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none z-0">
-        <div className="sticky top-24 flex justify-center h-screen items-start pt-16">
-          <div 
-            className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 transition-all ease-out will-change-transform w-64 h-64 md:w-80 md:h-80"
-            style={{
-              transform: `scale(${scrollScale})`,
-              opacity: 0.7 + (scrollScale * 0.3),
-            }}
-          >
-            <img 
-              src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
-              alt="Anoncast Show Art" 
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
       <div className="relative z-10">
         {/* Header */}
@@ -195,43 +176,68 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Hero */}
-        <section className="pt-16 pb-12 px-8 relative">
-          <div className="max-w-2xl mx-auto text-center">
-            {/* Show Image with Scroll-to-Shrink Effect */}
-            <div 
-              className="flex items-center justify-center relative transition-all duration-300 ease-out pointer-events-none"
-              style={{
-                height: `${scrollScale * 340}px`,
-                marginBottom: `${scrollScale * 2}rem`,
-              }}
-            >
-              {/* This is now a placeholder for the sticky background image */}
+        {/* Scroll & Land Wrapper */}
+        <div className="relative">
+          {/* Sticky Background Image Layer - Localized to this section */}
+          <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none z-0">
+            <div className="sticky top-32 flex justify-center h-[calc(100vh-128px)] items-start">
+              <div 
+                className="rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white transition-all ease-out will-change-transform w-64 h-64 md:w-80 md:h-80"
+                style={{
+                  transform: `scale(${scrollScale})`,
+                  opacity: 0.7 + (scrollScale * 0.3),
+                }}
+              >
+                <img 
+                  src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+                  alt="Anoncast Show Art" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900 relative z-10">
-              Turn Your Blog Into a Podcast
-            </h1>
-            <p className="text-lg text-gray-600 relative z-10">
-              Paste a link to any blog post or essay. We'll transform it into studio-quality audio you can share with the world.
-            </p>
           </div>
-        </section>
 
-        {/* Conversion Flow */}
-        <section className="px-8 pb-12 relative z-10">
-          <div className="bg-white rounded-3xl">
-            <ConversionFlow key={resetKey} />
+          <div className="relative z-10">
+            {/* Hero */}
+            <section className="pt-16 pb-12 px-8 relative">
+              <div className="max-w-2xl mx-auto text-center">
+                {/* Spacer for sticky image */}
+                <div 
+                  className="flex items-center justify-center relative transition-all duration-300 ease-out pointer-events-none"
+                  style={{
+                    height: `${scrollScale * 340}px`,
+                    marginBottom: `${scrollScale * 2}rem`,
+                  }}
+                />
+                <h1 className="text-4xl font-semibold tracking-tight mb-4 text-gray-900">
+                  Turn Your Blog Into a Podcast
+                </h1>
+                <p className="text-lg text-gray-600">
+                  Paste a link to any blog post or essay. We'll transform it into studio-quality audio you can share with the world.
+                </p>
+              </div>
+            </section>
+
+            {/* Conversion Flow */}
+            <section className="px-8 pb-12">
+              <div className="bg-white rounded-3xl">
+                <ConversionFlow key={resetKey} />
+              </div>
+              
+              <div className="mt-12 flex flex-col items-center">
+                {/* Final Landing Spot Gap for the Show Image */}
+                <div className="h-64 md:h-80 w-full mb-12 flex items-center justify-center relative">
+                  {/* The sticky image will land here at the end of the scroll wrapper */}
+                </div>
+              </div>
+            </section>
           </div>
-          
-          <div className="mt-12 flex flex-col items-center">
-            {/* Landing Spot Gap for the Show Image */}
-            <div className="h-64 md:h-80 w-full mb-12 flex items-center justify-center relative">
-              {/* The sticky image will reside here once the component scrolls past */}
-            </div>
+        </div>
 
-            {/* Floating Platform Links */}
-            <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000 relative z-10 py-4 w-full">
-              <div className="bg-white/80 backdrop-blur-sm px-8 py-4 rounded-full flex flex-wrap items-center justify-center gap-4">
+        {/* Floating Platform Links - Outside the Landing Wrapper */}
+        <section className="px-8 pb-12 relative z-20 bg-white">
+          <div className="flex flex-wrap items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="bg-white/80 backdrop-blur-sm px-8 py-4 rounded-full flex flex-wrap items-center justify-center gap-4 border border-gray-50 shadow-sm">
                 <a 
                   href="https://open.spotify.com/show/3gHnQIPcwmYlh3ixZ43pvO" 
                   target="_blank" 
