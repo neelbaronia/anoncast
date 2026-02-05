@@ -25,6 +25,10 @@ A web platform that allows bloggers to convert their written content into audio 
   - [x] Deploy Next.js app to Vercel
   - [x] Configure production domain (Namecheap)
   - [x] Switch Stripe to production (live) keys
+- [ ] **Background Job Migration**
+  - Move audio generation to a background queue (BullMQ/Inngest)
+  - Implement job status polling
+  - Allow users to navigate away safely
 - [ ] **Check and prevent redundant blog generation**
 - [ ] **Specific domain testing** (Notion, etc.)
 - [ ] **Dynamic Scraping Upgrade**

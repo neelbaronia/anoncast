@@ -94,6 +94,16 @@ export function ConversionFlow() {
   const [url, setUrl] = useState("");
   const urlInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sync ref value to state on mount and periodically to handle browser autofill
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (urlInputRef.current && urlInputRef.current.value !== url) {
+        setUrl(urlInputRef.current.value);
+      }
+    }, 500);
+    return () => clearInterval(timer);
+  }, [url]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -480,7 +490,7 @@ export function ConversionFlow() {
   };
 
   const handleFetch = async () => {
-    const currentUrl = urlInputRef.current?.value || url;
+    const currentUrl = (urlInputRef.current?.value || url).trim();
     if (!currentUrl) return;
     setIsLoading(true);
     setScrapeError(null);
@@ -581,11 +591,12 @@ export function ConversionFlow() {
     // Simulate continuous progress
     const progressInterval = setInterval(() => {
       setGenerationProgress(prev => {
-        if (prev >= 92) return prev; // Hold at 92% until actual completion
-        const increment = Math.random() * 2 + 0.5; // Random realistic increments
-        return Math.min(prev + increment, 92);
+        if (prev >= 96) return prev; // Hold at 96% until actual completion
+        // Slower, more continuous feeling: fast at first, then crawls
+        const increment = prev < 60 ? (Math.random() * 0.8 + 0.2) : (Math.random() * 0.2 + 0.05);
+        return Math.min(prev + increment, 96);
       });
-    }, 400);
+    }, 500);
     
     try {
       const response = await fetch('/api/generate', {
@@ -702,12 +713,11 @@ export function ConversionFlow() {
                     placeholder="https://your-blog.com/article"
                     ref={urlInputRef}
                     defaultValue={url}
-                    onChange={(e) => {
-                      const newUrl = e.target.value;
-                      setUrl(newUrl);
+                    onInput={(e) => {
+                      const target = e.target as HTMLInputElement;
+                      setUrl(target.value);
                       if (previewData) {
                         setPreviewData(null);
-                        // Don't clear the url state here, just the preview
                       }
                     }}
                     className="flex-1 h-11 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
@@ -715,7 +725,7 @@ export function ConversionFlow() {
                   {(!previewData || isLoading) && (
                     <Button 
                       onClick={handleFetch}
-                      disabled={!url || isLoading}
+                      disabled={!url.trim() || isLoading}
                       className="h-11 px-6 bg-gray-900 hover:bg-gray-800 text-white"
                     >
                       {isLoading ? (
@@ -1342,8 +1352,11 @@ export function ConversionFlow() {
                       )}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Estimated time: ~30 seconds
+                  <p className="text-xs text-gray-500 mb-1">
+                    Estimated time: ~30-60 seconds
+                  </p>
+                  <p className="text-[10px] text-amber-600 font-medium">
+                    Note: Please stay on this page during generation.
                   </p>
                   <button
                     onClick={() => setCurrentStep("review")}
@@ -1366,11 +1379,17 @@ export function ConversionFlow() {
                       />
                     ))}
                   </div>
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <Progress value={generationProgress} className="h-2" />
-                      <p className="text-center text-sm text-gray-600">
-                        Generating audio... {Math.round(generationProgress)}%
-                      </p>
+                      <div className="flex flex-col items-center gap-2">
+                        <p className="text-center text-sm font-medium text-gray-900">
+                          Generating audio... {Math.round(generationProgress)}%
+                        </p>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold animate-pulse border border-amber-100 uppercase tracking-tight">
+                          <Clock className="w-3 h-3" />
+                          Please do not navigate away or refresh
+                        </div>
+                      </div>
                     </div>
                 </div>
               ) : generationError ? (
