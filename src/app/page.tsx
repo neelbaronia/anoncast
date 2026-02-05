@@ -70,7 +70,7 @@ function generateShapes(count: number): FloatingShape[] {
       x: Math.random() * 100,
       y: Math.random() * 100,
       rotation: -60 + Math.random() * 120,
-      duration: 15 + Math.random() * 25, // faster animations
+      duration: 15 + Math.random() * 25,
       delay: Math.random() * -15,
       animation: animations[Math.floor(Math.random() * animations.length)],
     });
@@ -132,8 +132,11 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-white relative overflow-hidden">
-      {/* Floating Shapes */}
+    <main className="min-h-screen relative overflow-x-hidden">
+      {/* Fixed Page Background */}
+      <div className="fixed inset-0 bg-white -z-20" />
+
+      {/* Floating Shapes Container */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         {shapes.map((shape) => (
           <div
@@ -162,7 +165,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Content Area */}
+      {/* Content Layer */}
       <div className="relative z-10">
         {/* Header */}
         <header className="py-6 px-8 border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
@@ -190,14 +193,14 @@ export default function Home() {
           <div className="max-w-2xl mx-auto text-center">
             {/* Show Image with Scroll-to-Shrink Effect */}
             <div 
-              className="flex items-center justify-center relative mx-auto will-change-transform"
+              className="flex items-center justify-center relative mx-auto transition-all duration-300 ease-out"
               style={{
                 height: `${containerHeight}px`,
                 marginBottom: `${marginBottom}rem`,
               }}
             >
               <div 
-                className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white mx-auto will-change-transform"
+                className="w-64 h-64 md:w-80 md:h-80 rounded-[3rem] overflow-hidden shadow-2xl border-[12px] border-white animate-in fade-in zoom-in duration-1000 mx-auto transition-transform duration-75 ease-out"
                 style={{
                   transform: `scale(${scrollScale})`,
                 }}
