@@ -626,7 +626,7 @@ export function ConversionFlow() {
     }, 500);
     
     try {
-      let blob: Blob;
+      let audioUrlToSet: string | null = null;
       let newShowId = null;
 
       if (DEMO_MODE) {
@@ -636,8 +636,7 @@ export function ConversionFlow() {
         
         if (episodesData.success && episodesData.data.length > 0) {
           const latest = episodesData.data[0];
-          const audioRes = await fetch(latest.audio_url);
-          blob = await audioRes.blob();
+          audioUrlToSet = latest.audio_url;
           newShowId = latest.show_id;
           
           // Update preview data to match the "generated" episode for realism
@@ -678,12 +677,14 @@ export function ConversionFlow() {
           throw new Error(error.error || 'Failed to generate audio');
         }
 
-        blob = await response.blob();
+        const blob = await response.blob();
+        audioUrlToSet = URL.createObjectURL(blob);
         newShowId = response.headers.get('X-Show-Id');
       }
 
-      const audioUrl = URL.createObjectURL(blob);
-      setGeneratedAudioUrl(audioUrl);
+      if (audioUrlToSet) {
+        setGeneratedAudioUrl(audioUrlToSet);
+      }
       
       // Capture showId from headers or demo data for RSS feed
       if (newShowId) {
