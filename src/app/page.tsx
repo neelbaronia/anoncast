@@ -18,6 +18,7 @@ interface FloatingShape {
   animation: "spin" | "tilt" | "wobble";
   skewLeft?: number; // For non-isosceles trapezoids
   skewRight?: number; // For non-isosceles trapezoids
+  opacity: number;
 }
 
 const colors = [
@@ -79,6 +80,7 @@ function generateShapes(count: number): FloatingShape[] {
       animation: animations[Math.floor(Math.random() * animations.length)],
       skewLeft: type === "trapezoid" ? 0.1 + Math.random() * 0.3 : undefined,
       skewRight: type === "trapezoid" ? 0.1 + Math.random() * 0.3 : undefined,
+      opacity: 0.4 + Math.random() * 0.5,
     });
   }
   return shapes;
@@ -178,7 +180,7 @@ export default function Home() {
               borderBottom: shape.type === "triangle" || shape.type === "trapezoid"
                 ? `${shape.height}px solid ${shape.color}` 
                 : undefined,
-              opacity: 0.85,
+              opacity: shape.opacity,
               animationDuration: `${shape.duration}s`,
               animationDelay: `${shape.delay}s`,
             }}
