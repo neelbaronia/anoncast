@@ -3,7 +3,10 @@ import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
+    // First try the query with the shows join
+    let data: any[] | null = null;
+
+    const joinResult = await supabase
       .from('episodes')
       .select(`
         *,
@@ -15,21 +18,45 @@ export async function GET() {
       `)
       .order('published_at', { ascending: false });
 
-    if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (joinResult.error) {
+      // If the join fails (e.g., relationship not found), fall back to a simple query
+      console.warn("Episodes join query failed, falling back to simple query:", joinResult.error.message);
+      
+      const simpleResult = await supabase
+        .from('episodes')
+        .select('*')
+        .order('published_at', { ascending: false });
+
+      if (simpleResult.error) {
+        console.error("Supabase error (simple query):", simpleResult.error);
+        return NextResponse.json(
+          { success: false, error: simpleResult.error.message },
+          { status: 500 }
+        );
+      }
+
+      data = simpleResult.data;
+    } else {
+      data = joinResult.data;
+    }
+
+    if (!data) {
+      return NextResponse.json({ success: true, data: [] });
     }
 
     const formattedEpisodes = data.map((ep: any) => ({
       ...ep,
-      show_title: ep.shows?.title,
+      show_title: ep.shows?.title || null,
       show_author: 'anoncast.net',
-      display_image: ep.image_url || ep.shows?.image_url // Prioritize episode image
+      display_image: ep.image_url || ep.shows?.image_url || null
     }));
 
     return NextResponse.json({ success: true, data: formattedEpisodes });
   } catch (err) {
-    console.error("Internal error:", err);
-    return NextResponse.json({ error: 'Failed to fetch episodes' }, { status: 500 });
+    console.error("Internal error fetching episodes:", err);
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : 'Failed to fetch episodes' },
+      { status: 500 }
+    );
   }
 }

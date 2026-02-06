@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Play, Pause, ExternalLink, Calendar, Clock, User, Download, CreditCard } from "lucide-react";
+import { Loader2, Play, Pause, ExternalLink, Clock, User, Download } from "lucide-react";
 import Link from "next/link";
 import { BUY_MP3_LABEL } from "@/lib/constants";
 
@@ -92,42 +92,62 @@ function generateShapes(count: number): FloatingShape[] {
 interface Episode {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   audio_url: string;
-  duration: number;
-  published_at: string;
-  show_title?: string;
-  show_author?: string;
-  display_image?: string;
-  spotify_url?: string;
-  apple_url?: string;
+  duration: number | null;
+  published_at: string | null;
+  show_title?: string | null;
+  show_author?: string | null;
+  display_image?: string | null;
+  spotify_url?: string | null;
+  apple_url?: string | null;
 }
 
 export default function GeneratedBlogsPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
   const [showPropagationModal, setShowPropagationModal] = useState(false);
   const [modalConfig, setModalConfig] = useState<{ title: string; url: string }>({ title: "", url: "" });
-  const [audio] = useState<HTMLAudioElement | null>(typeof window !== 'undefined' ? new Audio() : null);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [shapes, setShapes] = useState<FloatingShape[]>([]);
 
   useEffect(() => {
     setShapes(generateShapes(15));
+    // Initialize Audio element on client side only
+    setAudio(new Audio());
   }, []);
 
   useEffect(() => {
     async function fetchEpisodes() {
       try {
+        setError(null);
         const response = await fetch('/api/episodes');
+        
+        if (!response.ok) {
+          let errorMessage = `Server error (${response.status})`;
+          try {
+            const result = await response.json();
+            errorMessage = result.error || errorMessage;
+          } catch {
+            // Response wasn't JSON
+          }
+          throw new Error(errorMessage);
+        }
+
         const result = await response.json();
 
-        if (!response.ok || !result.success) {
-          throw new Error(result.error || 'Failed to fetch');
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch episodes');
         }
 
         const data = result.data;
+        if (!Array.isArray(data)) {
+          throw new Error('Invalid response format');
+        }
+        
         setEpisodes(data);
 
         // Check for payment success redirect
@@ -150,6 +170,7 @@ export default function GeneratedBlogsPage() {
         }
       } catch (err) {
         console.error("Error fetching episodes:", err);
+        setError(err instanceof Error ? err.message : 'Failed to load episodes');
       } finally {
         setLoading(false);
       }
@@ -205,20 +226,25 @@ export default function GeneratedBlogsPage() {
     setShowPropagationModal(true);
   };
 
-  const formatDuration = (seconds: number) => {
+  const formatDuration = (seconds: number | null | undefined) => {
+    if (seconds == null || isNaN(seconds)) return "? min";
     const mins = Math.floor(seconds / 60);
     return `${mins} min`;
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "Unknown date";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "Unknown date";
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
     });
   };
 
-  const getSourceUrl = (description: string) => {
+  const getSourceUrl = (description: string | null | undefined) => {
+    if (!description) return null;
     const match = description.match(/Original blog: (https?:\/\/[^\s\n]+)/);
     return match ? match[1] : null;
   };
@@ -305,6 +331,32 @@ export default function GeneratedBlogsPage() {
             <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-4" />
             <p className="text-gray-500">Loading catalog...</p>
           </div>
+        ) : error ? (
+          <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-red-200">
+            <p className="text-red-500 font-medium mb-2">Failed to load episodes</p>
+            <p className="text-gray-500 text-sm mb-4">{error}</p>
+            <Button 
+              variant="outline"
+              onClick={() => {
+                setLoading(true);
+                setError(null);
+                fetch('/api/episodes')
+                  .then(r => r.json())
+                  .then(result => {
+                    if (result.success && Array.isArray(result.data)) {
+                      setEpisodes(result.data);
+                    } else {
+                      throw new Error(result.error || 'Failed to fetch');
+                    }
+                  })
+                  .catch(err => setError(err instanceof Error ? err.message : 'Failed to load episodes'))
+                  .finally(() => setLoading(false));
+              }}
+              className="text-sm"
+            >
+              Try Again
+            </Button>
+          </div>
         ) : episodes.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-gray-200">
             <p className="text-gray-500">No episodes have been generated yet.</p>
@@ -383,8 +435,8 @@ export default function GeneratedBlogsPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <a 
-                        href={episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title)}/episodes`} 
-                        onClick={(e) => handlePlatformClick(e, "Spotify", episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title)}/episodes`)}
+                        href={episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title || 'podcast')}/episodes`} 
+                        onClick={(e) => handlePlatformClick(e, "Spotify", episode.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(episode.title || 'podcast')}/episodes`)}
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-[10px] font-bold text-[#1DB954] hover:opacity-80 transition-opacity flex items-center gap-1"
@@ -440,7 +492,7 @@ export default function GeneratedBlogsPage() {
             <CardContent className="p-3 flex items-center gap-4">
               <div className="w-10 h-10 rounded bg-gray-900 flex-shrink-0 flex items-center justify-center overflow-hidden">
                 {episodes.find(e => e.id === playingId)?.display_image ? (
-                  <img src={episodes.find(e => e.id === playingId)?.display_image} alt="" className="w-full h-full object-cover" />
+                  <img src={episodes.find(e => e.id === playingId)?.display_image || undefined} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Play className="w-4 h-4 text-white" />
                 )}
