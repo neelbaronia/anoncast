@@ -40,9 +40,10 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    // 2. Prepare Body tasks
+    // 2. Prepare Body tasks + a single pause buffer to reuse between segments
     console.log('Preparing body segment tasks...');
     const bodyTasks = validSegments.map(segment => generateSpeech(segment.text, segment.voiceId));
+    const pauseTask = generateSpeech(" . . ", validSegments[0].voiceId); // ~0.5s pause to reuse
 
     // 3. Prepare Outro tasks
     let outroTasks: Promise<ArrayBuffer>[] = [];
@@ -60,19 +61,33 @@ export async function POST(request: NextRequest) {
     console.log('Executing all ElevenLabs requests in parallel...');
     const startTime = Date.now();
     
-    const [introBuffers, bodyBuffers, outroBuffers] = await Promise.all([
+    const [introBuffers, bodyBuffers, pauseBuffer, outroBuffers] = await Promise.all([
       Promise.all(introTasks.map(p => p.catch(e => {
         console.warn('Intro task failed:', e);
         return new ArrayBuffer(0);
       }))),
       Promise.all(bodyTasks),
+      pauseTask.catch(e => {
+        console.warn('Pause buffer failed:', e);
+        return new ArrayBuffer(0);
+      }),
       Promise.all(outroTasks.map(p => p.catch(e => {
         console.warn('Outro task failed:', e);
         return new ArrayBuffer(0);
       })))
     ]);
 
-    const audioBuffers = [...introBuffers, ...bodyBuffers, ...outroBuffers].filter(b => b.byteLength > 0);
+    // Interleave pause buffers between body segments
+    const bodyWithPauses: ArrayBuffer[] = [];
+    bodyBuffers.forEach((buf, i) => {
+      bodyWithPauses.push(buf);
+      // Add pause between segments (not after the last one)
+      if (i < bodyBuffers.length - 1 && pauseBuffer.byteLength > 0) {
+        bodyWithPauses.push(pauseBuffer);
+      }
+    });
+
+    const audioBuffers = [...introBuffers, ...bodyWithPauses, ...outroBuffers].filter(b => b.byteLength > 0);
     
     console.log(`All segments generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
 

@@ -1,13 +1,15 @@
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import Browserbase from '@browserbasehq/sdk';
-import { chromium } from 'playwright';
+// NOTE: playwright is imported dynamically inside fetchWithBrowserbase()
+// to avoid webpack bundling issues with native binaries
 
 export interface ScrapedContent {
   title: string;
   author: string;
   publishDate: string | null;
   featuredImage: string | null;
+  images: string[]; // All extracted images for thumbnail selection
   content: string;
   paragraphs: string[];
   wordCount: number;
@@ -22,7 +24,7 @@ function calculateReadTime(wordCount: number): string {
   return `${minutes} min read`;
 }
 
-async function fetchWithBrowserbase(url: string, retryCount = 0): Promise<{ html: string; browserText: string; featuredImage: string | null }> {
+async function fetchWithBrowserbase(url: string, retryCount = 0): Promise<{ html: string; browserText: string; images: string[] }> {
   const apiKey = process.env.BROWSERBASE_API_KEY;
   const projectId = process.env.BROWSERBASE_PROJECT_ID;
 
@@ -48,7 +50,8 @@ async function fetchWithBrowserbase(url: string, retryCount = 0): Promise<{ html
 
     console.log(`Created Browserbase session: ${sessionId}`);
 
-    // 2. Connect using Playwright with timeout
+    // 2. Connect using Playwright with timeout (dynamic import to avoid webpack issues)
+    const { chromium } = await import('playwright');
     const connectUrl = `wss://connect.browserbase.com?apiKey=${apiKey}&sessionId=${sessionId}`;
     
     // Add a connection timeout
@@ -150,35 +153,44 @@ async function fetchWithBrowserbase(url: string, retryCount = 0): Promise<{ html
     });
     console.log(`Body text from browser: ${browserText.length} chars`);
     
-    // Extract the first meaningful image from the page
-    const featuredImage = await page.evaluate(() => {
-      // Look for og:image first
+    // Extract ALL meaningful images from the page
+    const images = await page.evaluate(() => {
+      const found: string[] = [];
+      const seenSrcs = new Set<string>();
+      
+      // 1. og:image first (highest priority)
       const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
-      if (ogImage) return ogImage;
-      
-      // Look for the first large image in the content
-      const images = document.querySelectorAll('img');
-      for (const img of Array.from(images)) {
-        const src = img.src || img.getAttribute('data-src');
-        // Skip small images (likely icons or avatars)
-        if (src && img.naturalWidth > 200 && img.naturalHeight > 200) {
-          return src;
-        }
+      if (ogImage && !seenSrcs.has(ogImage)) {
+        found.push(ogImage);
+        seenSrcs.add(ogImage);
       }
       
-      // Fallback to first image with reasonable src
-      for (const img of Array.from(images)) {
-        const src = img.src || img.getAttribute('data-src');
-        if (src && !src.includes('icon') && !src.includes('avatar') && !src.includes('logo')) {
-          return src;
-        }
+      // 2. Collect all content images
+      const imgElements = document.querySelectorAll('img');
+      for (const img of Array.from(imgElements)) {
+        const src = img.src || img.getAttribute('data-src') || '';
+        if (!src || src.startsWith('data:') || seenSrcs.has(src)) continue;
+        
+        // Skip tiny images, icons, avatars, logos, tracking pixels
+        const skipPatterns = ['icon', 'avatar', 'logo', 'tracking', 'pixel', 'badge', 'emoji', 'spinner', 'loading', '.svg', '1x1', 'spacer'];
+        if (skipPatterns.some(p => src.toLowerCase().includes(p))) continue;
+        
+        // If we can check dimensions, skip small images
+        if (img.naturalWidth > 0 && img.naturalWidth < 80) continue;
+        if (img.naturalHeight > 0 && img.naturalHeight < 80) continue;
+        
+        // Skip if inside nav, header, footer
+        if (img.closest('nav, header, footer')) continue;
+        
+        seenSrcs.add(src);
+        found.push(src);
       }
       
-      return null;
+      return found;
     });
-    console.log(`Featured image: ${featuredImage || 'none found'}`);
+    console.log(`Found ${images.length} images from page`);
 
-    return { html, browserText, featuredImage };
+    return { html, browserText, images };
   } catch (error: any) {
     console.error('Browserbase fetch error:', error);
     
@@ -205,7 +217,7 @@ async function fetchWithBrowserbase(url: string, retryCount = 0): Promise<{ html
 export async function scrapeUrl(url: string): Promise<ScrapedContent> {
   let html = '';
   let browserText = ''; // Store text extracted directly from browser
-  let browserImage: string | null = null; // Store image extracted from browser
+  let browserImages: string[] = []; // Store images extracted from browser
   
   try {
     // Attempt 1: Static Fetch
@@ -232,7 +244,7 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
         const result = await fetchWithBrowserbase(url);
         html = result.html;
         browserText = result.browserText;
-        browserImage = result.featuredImage;
+        browserImages = result.images;
         console.log(`Browserbase fetch successful, HTML length: ${html.length}, browser text: ${browserText.length}`);
       }
     } else {
@@ -240,14 +252,14 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
       const result = await fetchWithBrowserbase(url);
       html = result.html;
       browserText = result.browserText;
-      browserImage = result.featuredImage;
+      browserImages = result.images;
     }
   } catch (error) {
     console.log('Static fetch error, falling back to Browserbase:', error);
     const result = await fetchWithBrowserbase(url);
     html = result.html;
     browserText = result.browserText;
-    browserImage = result.featuredImage;
+    browserImages = result.images;
   }
 
   // Use Readability to extract metadata (title, author) from HTML
@@ -292,22 +304,41 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
     paragraphs = textBlocks;
     textContent = textBlocks.join('\n\n');
   }
-  // PRIORITY 2: Use Readability textContent
-  else if (article && article.textContent && article.textContent.length > 500) {
-    console.log('Using Readability for paragraph extraction');
+  // PRIORITY 2: Use Readability HTML content to extract paragraphs with proper boundaries
+  else if (article && article.content && article.textContent && article.textContent.length > 500) {
+    console.log('Using Readability HTML for paragraph extraction');
     textContent = article.textContent;
-    paragraphs = textContent
-      .split(/\n\n+|\n(?=[A-Z])/)  // Split on double newlines OR single newline before capital letter
-      .map(p => p.trim())
-      .filter(p => p.length > 30);
     
-    // If we got too few paragraphs (text may be joined), try splitting on single newlines
+    // Parse the Readability HTML to get proper paragraph boundaries from <p>, <h2>, <h3>, <blockquote>, <li> tags
+    const readabilityDom = new JSDOM(article.content);
+    const readabilityDoc = readabilityDom.window.document;
+    const seenTexts = new Set<string>();
+    
+    readabilityDoc.querySelectorAll('p, h1, h2, h3, h4, blockquote, li').forEach((el: any) => {
+      const text = el.textContent?.trim().replace(/\s+/g, ' ');
+      if (text && text.length > 20 && !seenTexts.has(text)) {
+        seenTexts.add(text);
+        paragraphs.push(text);
+      }
+    });
+    
+    // Fallback: if HTML parsing gave too few paragraphs, try splitting textContent
+    if (paragraphs.length < 3 && textContent.length > 500) {
+      console.log('Readability HTML gave too few paragraphs, falling back to text splitting...');
+      paragraphs = textContent
+        .split(/\n\n+|\n(?=[A-Z])/)
+        .map((p: string) => p.trim())
+        .filter((p: string) => p.length > 30);
+    }
+    
+    // Last resort: split on single newlines
     if (paragraphs.length < 3 && textContent.length > 1000) {
       paragraphs = textContent
         .split('\n')
-        .map(p => p.trim())
-        .filter(p => p.length > 30);
+        .map((p: string) => p.trim())
+        .filter((p: string) => p.length > 30);
     }
+    
     console.log(`Readability extracted ${paragraphs.length} paragraphs`);
   }
   // PRIORITY 3: Manual DOM extraction fallback
@@ -350,11 +381,42 @@ export async function scrapeUrl(url: string): Promise<ScrapedContent> {
   else if (url.includes('ghost.io')) platform = 'Ghost';
   else if (html.includes('wp-content')) platform = 'WordPress';
 
+  // Collect all images: browser-extracted or DOM-extracted
+  let allImages: string[] = browserImages.length > 0 ? [...browserImages] : [];
+  
+  // If no browser images, extract from static HTML
+  if (allImages.length === 0) {
+    const seenSrcs = new Set<string>();
+    
+    // og:image first
+    const ogImage = (dom.window.document.querySelector('meta[property="og:image"]') as any)?.content;
+    if (ogImage) {
+      allImages.push(ogImage);
+      seenSrcs.add(ogImage);
+    }
+    
+    // Then all img elements
+    const imgElements = dom.window.document.querySelectorAll('img');
+    imgElements.forEach((img: any) => {
+      const src = img.src || img.getAttribute('data-src') || '';
+      if (!src || src.startsWith('data:') || seenSrcs.has(src)) return;
+      
+      const skipPatterns = ['icon', 'avatar', 'logo', 'tracking', 'pixel', 'badge', 'emoji', 'spinner', 'loading', '.svg', '1x1', 'spacer'];
+      if (skipPatterns.some((p: string) => src.toLowerCase().includes(p))) return;
+      
+      seenSrcs.add(src);
+      allImages.push(src);
+    });
+  }
+  
+  console.log(`Total images found: ${allImages.length}`);
+
   return {
     title: title || 'Untitled',
     author: author || 'Unknown Author',
     publishDate: null, 
-    featuredImage: browserImage || (dom.window.document.querySelector('meta[property="og:image"]') as any)?.content || null,
+    featuredImage: allImages[0] || null,
+    images: allImages,
     content: textContent,
     paragraphs,
     wordCount,

@@ -68,6 +68,7 @@ interface ScrapedContent {
   author: string;
   publishDate: string | null;
   featuredImage: string | null;
+  images: string[]; // All extracted images for thumbnail selection
   content: string;
   paragraphs: string[];
   wordCount: number;
@@ -142,6 +143,7 @@ export function ConversionFlow() {
   const [audioCurrentTime, setAudioCurrentTime] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Track which image is selected as thumbnail
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const totalWordCount = textSegments.reduce((acc, s) => acc + s.text.split(/\s+/).filter(w => w.length > 0).length, 0);
@@ -220,10 +222,13 @@ export function ConversionFlow() {
       const savedParagraphs = localStorage.getItem('last_paragraphs');
       const paragraphs = savedParagraphs ? JSON.parse(savedParagraphs) : [];
       
+      const savedImages = localStorage.getItem('last_images');
+      const images = savedImages ? JSON.parse(savedImages) : [];
       setPreviewData({
         title: lastTitle,
         author: localStorage.getItem('last_author') || '',
         featuredImage: localStorage.getItem('last_image') || null,
+        images: images,
         platform: localStorage.getItem('last_platform') || 'Custom',
         url: localStorage.getItem('last_url') || '',
         wordCount: parseInt(localStorage.getItem('last_word_count') || '0'),
@@ -571,6 +576,7 @@ export function ConversionFlow() {
           title: ep.title,
           author: 'anoncast.net',
           featuredImage: ep.image_url,
+          images: ep.image_url ? [ep.image_url] : [],
           url: ep.source_url || currentUrl,
           paragraphs: [],
           content: '',
@@ -600,12 +606,14 @@ export function ConversionFlow() {
       }
 
       setPreviewData(scraped);
+      setSelectedImageIndex(0); // Reset to first image
       setScrapeProgress(''); // Clear progress message when done
       
       // Secondary fallback storage for the final card and persistence
       localStorage.setItem('last_title', scraped.title);
       localStorage.setItem('last_author', scraped.author);
       localStorage.setItem('last_image', scraped.featuredImage || '');
+      localStorage.setItem('last_images', JSON.stringify(scraped.images || []));
       localStorage.setItem('last_platform', scraped.platform);
       localStorage.setItem('last_url', scraped.url);
       localStorage.setItem('last_word_count', scraped.wordCount.toString());
@@ -697,6 +705,7 @@ export function ConversionFlow() {
             title: latest.title,
             author: latest.show_author || 'anoncast.net',
             featuredImage: latest.display_image || latest.image_url,
+            images: latest.image_url ? [latest.image_url] : [],
             url: latest.description.match(/Original blog: (https?:\/\/[^\s\n]+)/)?.[1] || '',
             paragraphs: [], // Not needed for publish step
             content: '',
@@ -717,7 +726,7 @@ export function ConversionFlow() {
             metadata: {
               title: previewData?.title || localStorage.getItem('last_title'),
               author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
-              image: previewData?.featuredImage || localStorage.getItem('last_image'),
+              image: selectedImageIndex >= 0 ? (previewData?.images?.[selectedImageIndex] || previewData?.featuredImage) : null,
               url: previewData?.url || localStorage.getItem('last_url'),
               firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
             }
@@ -898,10 +907,10 @@ export function ConversionFlow() {
                           <img 
                             src={previewData.featuredImage} 
                             alt="Featured" 
-                            className="w-16 h-16 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                          <div className="w-20 h-20 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
                             <FileText className="w-6 h-6 text-gray-400" />
                           </div>
                         )}
@@ -991,10 +1000,10 @@ export function ConversionFlow() {
                           <img 
                             src={previewData.featuredImage} 
                             alt="Featured" 
-                            className="w-16 h-16 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                          <div className="w-20 h-20 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
                             <FileText className="w-6 h-6 text-gray-400" />
                           </div>
                         )}
@@ -1036,6 +1045,80 @@ export function ConversionFlow() {
                     </div>
                   </Card>
                 )}
+
+                {/* Thumbnail Image Selector */}
+                {previewData && previewData.images && previewData.images.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                      Episode Thumbnail
+                    </h3>
+                    <div className="flex items-center gap-3 overflow-x-auto pb-2">
+                      {previewData.images.map((imgUrl, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedImageIndex(idx);
+                            // Also update featuredImage so it shows in the preview card
+                            setPreviewData(prev => prev ? { ...prev, featuredImage: imgUrl } : prev);
+                          }}
+                          className={`
+                            relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all
+                            ${selectedImageIndex === idx 
+                              ? 'border-blue-500 ring-2 ring-blue-200 shadow-md' 
+                              : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100'
+                            }
+                          `}
+                        >
+                          <img 
+                            src={imgUrl} 
+                            alt={`Thumbnail option ${idx + 1}`} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              // Hide broken images
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                          {selectedImageIndex === idx && (
+                            <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                              <Check className="w-5 h-5 text-blue-600 drop-shadow" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                      {/* Option for no thumbnail / default */}
+                      <button
+                        onClick={() => {
+                          setSelectedImageIndex(-1);
+                          setPreviewData(prev => prev ? { ...prev, featuredImage: null } : prev);
+                        }}
+                        className={`
+                          relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all
+                          ${selectedImageIndex === -1
+                            ? 'border-blue-500 ring-2 ring-blue-200 shadow-md' 
+                            : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100'
+                          }
+                        `}
+                      >
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center relative">
+                          <img 
+                            src="https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg" 
+                            alt="Default Thumbnail" 
+                            className="w-full h-full object-cover opacity-60"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-gray-800 bg-white/80 px-1.5 py-0.5 rounded shadow-sm border border-gray-100">Default</span>
+                          </div>
+                        </div>
+                        {selectedImageIndex === -1 && (
+                          <div className="absolute inset-0 bg-blue-500/10 flex items-center justify-center">
+                            <Check className="w-5 h-5 text-blue-600 drop-shadow" />
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="text-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-900 mb-1">
                     Assign voices to your content
@@ -1512,10 +1595,10 @@ export function ConversionFlow() {
                           <img 
                             src={previewData.featuredImage} 
                             alt="Featured" 
-                            className="w-16 h-16 object-cover rounded-lg shadow-sm flex-shrink-0"
+                            className="w-20 h-20 object-cover rounded-lg shadow-sm flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
+                          <div className="w-20 h-20 bg-gray-100 flex items-center justify-center rounded-lg flex-shrink-0 border border-gray-200">
                             <FileText className="w-6 h-6 text-gray-400" />
                           </div>
                         )}
