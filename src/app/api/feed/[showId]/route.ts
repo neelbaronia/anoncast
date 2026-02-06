@@ -32,10 +32,6 @@ export async function GET(
     }
 
     // 3. Build RSS Feed
-    // Prepare show image URL with proper formatting
-    const showImageUrl = (show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').trim();
-    const formattedShowImageUrl = showImageUrl.replace(/\.png$/i, '.jpg');
-    
     const feed = create({ version: '1.0', encoding: 'UTF-8' })
       .ele('rss', { 
         version: '2.0', 
@@ -52,7 +48,7 @@ export async function GET(
           .ele('itunes:name').txt('anoncast.net').up()
           .ele('itunes:email').txt('nbaronia@gmail.com').up()
         .up()
-        .ele('itunes:image', { href: formattedShowImageUrl }).up()
+        .ele('itunes:image', { href: (show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').trim() }).up()
         .ele('itunes:category', { text: 'Technology' }).up()
         .ele('itunes:explicit').txt('no').up()
         .ele('itunes:type').txt('episodic').up()
@@ -60,11 +56,6 @@ export async function GET(
 
     // Add episodes to feed
     episodes.forEach((episode: any) => {
-      // Determine the episode image URL, ensuring it's properly formatted
-      const episodeImageUrl = (episode.image_url || show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').trim();
-      // Ensure the URL uses .jpg extension (Apple Podcasts prefers JPG)
-      const formattedImageUrl = episodeImageUrl.replace(/\.png$/i, '.jpg');
-      
       const item = feed.ele('item')
         .ele('title').txt(episode.title).up()
         .ele('description').txt(episode.description || episode.title).up()
@@ -73,14 +64,9 @@ export async function GET(
         .ele('guid', { isPermaLink: 'false' }).txt(episode.id).up()
         .ele('itunes:author').txt('anoncast.net').up()
         .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
-        .ele('itunes:explicit').txt('no').up();
-      
-      // Add episode image using itunes:image (Apple Podcasts standard)
-      if (formattedImageUrl) {
-        item.ele('itunes:image', { href: formattedImageUrl }).up();
-      }
-      
-      item.ele('enclosure', {
+        .ele('itunes:explicit').txt('no').up()
+        .ele('itunes:image', { href: (episode.image_url || show.image_url || 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg').trim() }).up()
+        .ele('enclosure', {
           url: (episode.audio_url || '').trim(),
           length: (episode.file_size || (episode.duration * 16000) || 0).toString(),
           type: 'audio/mpeg'

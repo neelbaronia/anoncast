@@ -1672,7 +1672,7 @@ export function ConversionFlow() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mb-1">
-                    Estimated time: ~30-60 seconds
+                    Estimated time: ~{Math.max(30, Math.ceil(textSegments.length / 5) * 15)}-{Math.max(60, Math.ceil(textSegments.length / 5) * 25)} seconds
                   </p>
                   <p className="text-[10px] text-amber-600 font-medium">
                     Note: Please stay on this page during generation.

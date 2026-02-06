@@ -40,11 +40,10 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    // 2. Prepare Body tasks + a single pause buffer to reuse between segments
-    console.log('Preparing body segment tasks...');
-    const bodyTasks = validSegments.map(segment => generateSpeech(segment.text, segment.voiceId));
-    const pauseTask = generateSpeech(" . . ", validSegments[0].voiceId); // ~0.5s pause to reuse
-
+    // 2. Prepare Body tasks data (we'll execute them in batches below)
+    console.log('Preparing body segment data...');
+    // We don't map to promises here yet, we do it in the batch loop
+    
     // 3. Prepare Outro tasks
     let outroTasks: Promise<ArrayBuffer>[] = [];
     if (validSegments.length > 0) {
@@ -57,16 +56,19 @@ export async function POST(request: NextRequest) {
       ];
     }
 
-    // Execute all tasks in parallel
-    console.log('Executing all ElevenLabs requests in parallel...');
+    // 4. Prepare Pause task
+    const pauseTask = generateSpeech(" . . ", validSegments[0].voiceId); // ~0.5s pause to reuse
+
+    // Execute tasks with concurrency control to avoid ElevenLabs 429 errors
+    console.log('Executing ElevenLabs requests in controlled batches...');
     const startTime = Date.now();
     
-    const [introBuffers, bodyBuffers, pauseBuffer, outroBuffers] = await Promise.all([
+    // 1. Run intro, outro, and pause in parallel (small number of requests)
+    const [introBuffers, pauseBuffer, outroBuffers] = await Promise.all([
       Promise.all(introTasks.map(p => p.catch(e => {
         console.warn('Intro task failed:', e);
         return new ArrayBuffer(0);
       }))),
-      Promise.all(bodyTasks),
       pauseTask.catch(e => {
         console.warn('Pause buffer failed:', e);
         return new ArrayBuffer(0);
@@ -76,6 +78,21 @@ export async function POST(request: NextRequest) {
         return new ArrayBuffer(0);
       })))
     ]);
+
+    // 2. Process body segments in batches to stay under the 10-concurrent-request limit
+    const bodyBuffers: ArrayBuffer[] = [];
+    const BATCH_SIZE = 5; // Safely below the 10 limit
+    
+    for (let i = 0; i < validSegments.length; i += BATCH_SIZE) {
+      const batch = validSegments.slice(i, i + BATCH_SIZE);
+      console.log(`Processing batch ${Math.floor(i/BATCH_SIZE) + 1} of ${Math.ceil(validSegments.length/BATCH_SIZE)}...`);
+      
+      const batchResults = await Promise.all(
+        batch.map(segment => generateSpeech(segment.text, segment.voiceId))
+      );
+      
+      bodyBuffers.push(...batchResults);
+    }
 
     // Interleave pause buffers between body segments
     const bodyWithPauses: ArrayBuffer[] = [];
@@ -152,7 +169,7 @@ export async function POST(request: NextRequest) {
           title: metadata?.title || 'Untitled Episode',
           description: `Original blog: ${metadata?.url || 'Unknown source'}\n\n${metadata?.firstSentence || ''}\n\nConvert your blog to audio at https://www.anoncast.net/ , or browse generated episodes at https://www.anoncast.net/generated`,
           audio_url: audioUrl,
-          image_url: (metadata?.image || null)?.replace('.png', '.jpg'), // Ensure .jpg for fallback image
+          image_url: metadata?.image || null, // Keep original image URL (PNG or JPG)
           duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
           file_size: finalBuffer.length, // Exact byte size for RSS enclosure
           source_url: metadata?.url || null // Save source URL for redundancy checks
