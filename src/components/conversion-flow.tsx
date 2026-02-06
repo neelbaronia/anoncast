@@ -85,6 +85,16 @@ const steps = [
 
 const DEMO_MODE = false; // Set to true to skip Stripe/ElevenLabs and use existing audio for demo video
 
+const SCRAPE_PROGRESS_MESSAGES = [
+  'Fetching content...',
+  'Loading the page...',
+  'Rendering JavaScript...',
+  'Extracting text...',
+  'Finding images...',
+  'Processing content...',
+  'Almost there...',
+];
+
 const getFirstSentence = (text: string) => {
   if (!text) return "";
   const match = text.match(/^.*?[.!?](?:\s|$)/);
@@ -113,7 +123,10 @@ export function ConversionFlow() {
   const [textSegments, setTextSegments] = useState<TextSegment[]>([]);
   const [activeVoice, setActiveVoice] = useState<string>("");
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const isSplittingRef = useRef(false); // Track when we're splitting to prevent onBlur interference
   const [scrapeError, setScrapeError] = useState<string | null>(null);
+  const [scrapeProgress, setScrapeProgress] = useState<string>('');
+  const [scrapeProgressIndex, setScrapeProgressIndex] = useState<number>(0);
   const [voiceOptions, setVoiceOptions] = useState<VoiceOption[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
@@ -134,6 +147,17 @@ export function ConversionFlow() {
   const totalWordCount = textSegments.reduce((acc, s) => acc + s.text.split(/\s+/).filter(w => w.length > 0).length, 0);
   const audioLengthMins = Math.ceil(totalWordCount / 150);
   const readTimeMins = Math.ceil(totalWordCount / 200);
+
+  // Rotate through progress messages while scraping
+  useEffect(() => {
+    if (!isLoading || !scrapeProgress) return;
+    
+    const interval = setInterval(() => {
+      setScrapeProgressIndex(prev => (prev + 1) % SCRAPE_PROGRESS_MESSAGES.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [isLoading, scrapeProgress]);
 
   // Check for payment success or existing preview on mount
   useEffect(() => {
@@ -521,6 +545,8 @@ export function ConversionFlow() {
     if (!currentUrl) return;
     setIsLoading(true);
     setScrapeError(null);
+    setScrapeProgress('active'); // Set to active to trigger message rotation
+    setScrapeProgressIndex(0);
     
     try {
       const response = await fetch('/api/scrape', {
@@ -533,6 +559,31 @@ export function ConversionFlow() {
       
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to scrape URL');
+      }
+
+      // Handle existing episode (Redundancy check)
+      if (result.alreadyExists) {
+        const ep = result.episode;
+        setGeneratedAudioUrl(ep.audio_url);
+        setShowId(ep.show_id || "00000000-0000-0000-0000-000000000000");
+        
+        setPreviewData({
+          title: ep.title,
+          author: 'anoncast.net',
+          featuredImage: ep.image_url,
+          url: ep.source_url || currentUrl,
+          paragraphs: [],
+          content: '',
+          wordCount: 0,
+          estimatedReadTime: '',
+          publishDate: ep.published_at,
+          platform: 'Custom'
+        });
+        
+        setScrapeProgress('');
+        setCurrentStep('publish');
+        setIsLoading(false);
+        return;
       }
       
       const scraped: ScrapedContent = result.data;
@@ -549,6 +600,7 @@ export function ConversionFlow() {
       }
 
       setPreviewData(scraped);
+      setScrapeProgress(''); // Clear progress message when done
       
       // Secondary fallback storage for the final card and persistence
       localStorage.setItem('last_title', scraped.title);
@@ -579,6 +631,7 @@ export function ConversionFlow() {
     } catch (error) {
       setScrapeError(error instanceof Error ? error.message : 'Failed to fetch content');
       setPreviewData(null);
+      setScrapeProgress('');
     } finally {
       setIsLoading(false);
     }
@@ -783,7 +836,7 @@ export function ConversionFlow() {
                     }}
                     className="flex-1 h-11 border-gray-200 focus:border-gray-400 focus:ring-gray-400"
                   />
-                  {(!previewData || isLoading) && (
+                  {(!previewData || isLoading) && !scrapeProgress && (
                     <Button 
                       onClick={handleFetch}
                       disabled={!url.trim() || isLoading}
@@ -807,7 +860,14 @@ export function ConversionFlow() {
                   </div>
                 )}
 
-                {!previewData && !scrapeError && (
+                {scrapeProgress && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {SCRAPE_PROGRESS_MESSAGES[scrapeProgressIndex]}
+                  </div>
+                )}
+
+                {!previewData && !scrapeError && !scrapeProgress && (
                   <div className="flex items-center justify-center gap-3 pt-2">
                     <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Works with</span>
                     <div className="flex gap-2">
@@ -1216,14 +1276,129 @@ export function ConversionFlow() {
                             }}
                           >
                             <textarea
+                              key={`segment-${segment.id}`}
                               defaultValue={segment.text}
+                              data-segment-id={segment.id}
+                              onKeyDown={(e) => {
+                                const target = e.target as HTMLTextAreaElement;
+                                const cursorPos = target.selectionStart;
+                                const cursorEnd = target.selectionEnd;
+                                const text = target.value;
+
+                                // === BACKSPACE at start: merge with previous paragraph ===
+                                if (e.key === 'Backspace' && cursorPos === 0 && cursorEnd === 0) {
+                                  setTextSegments(segments => {
+                                    const index = segments.findIndex(s => s.id === segment.id);
+                                    if (index <= 0) return segments; // No previous segment to merge with
+                                    
+                                    e.preventDefault();
+                                    isSplittingRef.current = true;
+                                    
+                                    const prevSegment = segments[index - 1];
+                                    const currentText = text.trim();
+                                    const prevText = prevSegment.text.trim();
+                                    const mergedText = prevText + '\n' + currentText;
+                                    const mergedId = Date.now();
+                                    const cursorAfterMerge = prevText.length + 1; // Position after prev text + newline
+                                    
+                                    const newSegments = [...segments];
+                                    // Replace previous segment with merged text (new ID to force remount)
+                                    newSegments[index - 1] = {
+                                      id: mergedId,
+                                      text: mergedText,
+                                      voiceId: prevSegment.voiceId,
+                                      confirmed: prevSegment.confirmed
+                                    };
+                                    // Remove current segment
+                                    newSegments.splice(index, 1);
+                                    
+                                    // Focus merged textarea and place cursor at join point
+                                    setTimeout(() => {
+                                      const mergedTextarea = document.querySelector(`textarea[data-segment-id="${mergedId}"]`) as HTMLTextAreaElement;
+                                      if (mergedTextarea) {
+                                        mergedTextarea.focus();
+                                        mergedTextarea.setSelectionRange(cursorAfterMerge, cursorAfterMerge);
+                                      }
+                                      isSplittingRef.current = false;
+                                    }, 50);
+                                    
+                                    return newSegments;
+                                  });
+                                  return;
+                                }
+
+                                // === ENTER twice: split into two paragraphs ===
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  // Check if there's a newline just before the cursor (double Enter)
+                                  if (cursorPos > 0 && text[cursorPos - 1] === '\n') {
+                                    // Find where to split - at the newline before cursor
+                                    const beforeText = text.slice(0, cursorPos - 1).trim();
+                                    const afterText = text.slice(cursorPos).trim();
+                                    
+                                    if (beforeText && afterText) {
+                                      e.preventDefault();
+                                      
+                                      // Set flag to prevent onBlur from interfering
+                                      isSplittingRef.current = true;
+                                      
+                                      // Both segments need NEW IDs so React fully recreates the textareas
+                                      const firstSegmentId = Date.now();
+                                      const secondSegmentId = Date.now() + 1;
+                                      
+                                      // Create two segments
+                                      setTextSegments(segments => {
+                                        const index = segments.findIndex(s => s.id === segment.id);
+                                        const newSegments = [...segments];
+                                        
+                                        // Replace current segment with BEFORE text (new ID forces remount)
+                                        newSegments[index] = {
+                                          id: firstSegmentId,
+                                          text: beforeText,
+                                          voiceId: segment.voiceId,
+                                          confirmed: segment.confirmed
+                                        };
+                                        
+                                        // Insert new segment after with AFTER text
+                                        newSegments.splice(index + 1, 0, {
+                                          id: secondSegmentId,
+                                          text: afterText,
+                                          voiceId: segment.voiceId,
+                                          confirmed: segment.confirmed
+                                        });
+                                        
+                                        return newSegments;
+                                      });
+                                      
+                                      // Focus the new textarea after React renders it
+                                      setTimeout(() => {
+                                        const newTextarea = document.querySelector(`textarea[data-segment-id="${secondSegmentId}"]`) as HTMLTextAreaElement;
+                                        if (newTextarea) {
+                                          newTextarea.focus();
+                                          newTextarea.setSelectionRange(0, 0);
+                                        }
+                                        isSplittingRef.current = false;
+                                      }, 50);
+                                    }
+                                  }
+                                }
+                              }}
                               onBlur={(e) => {
-                                // Sync state on blur to preserve browser undo
-                                setTextSegments(segments =>
-                                  segments.map(s =>
-                                    s.id === segment.id ? { ...s, text: e.target.value } : s
-                                  )
-                                );
+                                // Don't update if we're in the middle of splitting
+                                if (isSplittingRef.current) {
+                                  return;
+                                }
+                                
+                                // Only sync if the text actually changed
+                                const newText = e.target.value;
+                                setTextSegments(segments => {
+                                  const currentSegment = segments.find(s => s.id === segment.id);
+                                  if (!currentSegment || currentSegment.text === newText) {
+                                    return segments; // No change needed
+                                  }
+                                  return segments.map(s =>
+                                    s.id === segment.id ? { ...s, text: newText } : s
+                                  );
+                                });
                               }}
                               onInput={(e) => {
                                 const target = e.target as HTMLTextAreaElement;
@@ -1239,7 +1414,7 @@ export function ConversionFlow() {
                               onClick={(e) => e.stopPropagation()}
                               rows={1}
                               style={{ lineHeight: '1.4' }}
-                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none px-3 py-0 text-gray-700 overflow-hidden block"
+                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 resize-none px-3 py-0 text-gray-700 text-sm overflow-hidden block"
                             />
                           </div>
                         </div>

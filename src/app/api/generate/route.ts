@@ -27,45 +27,54 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate audio for each segment
-    const audioBuffers: ArrayBuffer[] = [];
+    console.log(`Starting generation for ${validSegments.length} segments...`);
     
-    // 1. Generate Title Intro if provided
+    // 1. Prepare Title Intro tasks if provided
+    let introTasks: Promise<ArrayBuffer>[] = [];
     if (metadata?.title && validSegments.length > 0) {
       const introVoiceId = validSegments[0].voiceId;
-      try {
-        const titleBuffer = await generateSpeech(metadata.title, introVoiceId);
-        audioBuffers.push(titleBuffer);
-        
-        // Add a 1s pause (We use a specific pause string that ElevenLabs interprets as a significant break)
-        const pauseBuffer = await generateSpeech(" . . . . . ", introVoiceId);
-        audioBuffers.push(pauseBuffer);
-      } catch (introError) {
-        console.warn('Failed to generate title intro, skipping:', introError);
-      }
+      console.log('Generating title intro...');
+      introTasks = [
+        generateSpeech(metadata.title, introVoiceId),
+        generateSpeech(" . . . . . ", introVoiceId) // 1s pause
+      ];
     }
 
-    // 2. Generate Body segments
-    for (const segment of validSegments) {
-      const buffer = await generateSpeech(segment.text, segment.voiceId);
-      audioBuffers.push(buffer);
-    }
+    // 2. Prepare Body tasks
+    console.log('Preparing body segment tasks...');
+    const bodyTasks = validSegments.map(segment => generateSpeech(segment.text, segment.voiceId));
 
-    // 3. Generate Outro
+    // 3. Prepare Outro tasks
+    let outroTasks: Promise<ArrayBuffer>[] = [];
     if (validSegments.length > 0) {
       const outroVoiceId = validSegments[validSegments.length - 1].voiceId;
-      try {
-        // Add a 1s pause
-        const pauseBuffer = await generateSpeech(" . . . . . ", outroVoiceId);
-        audioBuffers.push(pauseBuffer);
-
-        // Add the outro text
-        const outroText = "This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening!";
-        const outroBuffer = await generateSpeech(outroText, outroVoiceId);
-        audioBuffers.push(outroBuffer);
-      } catch (outroError) {
-        console.warn('Failed to generate outro, skipping:', outroError);
-      }
+      console.log('Preparing outro tasks...');
+      const outroText = "This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening!";
+      outroTasks = [
+        generateSpeech(" . . . . . ", outroVoiceId), // 1s pause
+        generateSpeech(outroText, outroVoiceId)
+      ];
     }
+
+    // Execute all tasks in parallel
+    console.log('Executing all ElevenLabs requests in parallel...');
+    const startTime = Date.now();
+    
+    const [introBuffers, bodyBuffers, outroBuffers] = await Promise.all([
+      Promise.all(introTasks.map(p => p.catch(e => {
+        console.warn('Intro task failed:', e);
+        return new ArrayBuffer(0);
+      }))),
+      Promise.all(bodyTasks),
+      Promise.all(outroTasks.map(p => p.catch(e => {
+        console.warn('Outro task failed:', e);
+        return new ArrayBuffer(0);
+      })))
+    ]);
+
+    const audioBuffers = [...introBuffers, ...bodyBuffers, ...outroBuffers].filter(b => b.byteLength > 0);
+    
+    console.log(`All segments generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
 
     // Calculate total length
     const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
@@ -130,7 +139,8 @@ export async function POST(request: NextRequest) {
           audio_url: audioUrl,
           image_url: (metadata?.image || null)?.replace('.png', '.jpg'), // Ensure .jpg for fallback image
           duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
-          file_size: finalBuffer.length // Exact byte size for RSS enclosure
+          file_size: finalBuffer.length, // Exact byte size for RSS enclosure
+          source_url: metadata?.url || null // Save source URL for redundancy checks
         });
 
       if (episodeError) throw episodeError;

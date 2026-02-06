@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scrapeUrl } from '@/lib/scraper';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,13 +15,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Basic URL validation
+    let normalizedUrl = url;
     try {
-      new URL(url);
+      const urlObj = new URL(url);
+      // Remove trailing slash and normalize
+      normalizedUrl = urlObj.origin + urlObj.pathname.replace(/\/$/, '') + urlObj.search;
     } catch {
       return NextResponse.json(
         { error: 'Invalid URL format' },
         { status: 400 }
       );
+    }
+
+    // Check for existing episode with this source_url
+    try {
+      // Check for exact match or normalized match
+      const { data: existingEpisode } = await supabase
+        .from('episodes')
+        .select('*')
+        .or(`source_url.eq."${url}",source_url.eq."${normalizedUrl}"`)
+        .order('published_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingEpisode) {
+        console.log(`Found existing episode for URL: ${url}`);
+        return NextResponse.json({
+          success: true,
+          alreadyExists: true,
+          episode: existingEpisode
+        });
+      }
+    } catch (e) {
+      // Ignore error and proceed to scrape if check fails (e.g. column missing)
+      console.log('Existing episode check failed or no match found:', e);
     }
 
     // Scrape the URL
@@ -64,8 +92,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Redirect to POST handler logic
+  let normalizedUrl = url;
   try {
-    new URL(url);
+    const urlObj = new URL(url);
+    normalizedUrl = urlObj.origin + urlObj.pathname.replace(/\/$/, '') + urlObj.search;
   } catch {
     return NextResponse.json(
       { error: 'Invalid URL format' },
@@ -74,6 +104,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Check for existing episode
+    const { data: existingEpisode } = await supabase
+      .from('episodes')
+      .select('*')
+      .or(`source_url.eq."${url}",source_url.eq."${normalizedUrl}"`)
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (existingEpisode) {
+      return NextResponse.json({
+        success: true,
+        alreadyExists: true,
+        episode: existingEpisode
+      });
+    }
+
     const content = await scrapeUrl(url);
 
     if (content.paragraphs.length === 0) {

@@ -1,4 +1,7 @@
-import { load, CheerioAPI } from 'cheerio';
+import { JSDOM } from 'jsdom';
+import { Readability } from '@mozilla/readability';
+import Browserbase from '@browserbasehq/sdk';
+import { chromium } from 'playwright';
 
 export interface ScrapedContent {
   title: string;
@@ -13,425 +16,352 @@ export interface ScrapedContent {
   url: string;
 }
 
-interface PlatformScraper {
-  detect: (url: string, $: CheerioAPI) => boolean;
-  scrape: (url: string, $: CheerioAPI) => Partial<ScrapedContent>;
-}
-
-// Medium scraper
-const mediumScraper: PlatformScraper = {
-  detect: (url: string) => {
-    return url.includes('medium.com') || url.includes('.medium.com');
-  },
-  scrape: (url: string, $: CheerioAPI) => {
-    const title = $('h1').first().text().trim() || 
-                  $('article h1').text().trim() ||
-                  $('meta[property="og:title"]').attr('content') || '';
-    
-    const author = $('a[rel="author"]').text().trim() ||
-                   $('meta[name="author"]').attr('content') ||
-                   $('[data-testid="authorName"]').text().trim() || '';
-    
-    const publishDate = $('time').attr('datetime') ||
-                        $('meta[property="article:published_time"]').attr('content') || null;
-    
-    const featuredImage = $('meta[property="og:image"]').attr('content') ||
-                          $('article img').first().attr('src') || null;
-    
-    // Medium article content is in <article> or specific section tags
-    const contentParagraphs: string[] = [];
-    
-    // Try multiple selectors for Medium content
-    const selectors = [
-      'article p', 'article h2', 'article h3', 'article h4', 'article blockquote',
-      'section p', 'section h2', 'section h3',
-      '.post-content p', '.post-content h2', '.post-content h3',
-      '[data-testid="postContent"] p', '[data-testid="postContent"] h2', '[data-testid="postContent"] h3',
-      'p.pw-post-body-paragraph',
-      '.graf--p', '.graf--h3', '.graf--h4', '.graf--blockquote'
-    ];
-    
-    $(selectors.join(', ')).each((_, el) => {
-      const text = $(el).text().trim();
-      // Filter out meta info like "5 min read", "Listen", or author bios
-      if (text && text.length > 20 && 
-          !text.startsWith('Follow') && 
-          !text.startsWith('Listen') &&
-          !text.includes('min read')) {
-        contentParagraphs.push(text);
-      }
-    });
-    
-    // If still no paragraphs, try looking for any p tags in the main body as a last resort
-    if (contentParagraphs.length === 0) {
-      $('p').each((_, el) => {
-        const text = $(el).text().trim();
-        if (text && text.length > 30 && !text.includes('©')) {
-          contentParagraphs.push(text);
-        }
-      });
-    }
-    
-    return {
-      title,
-      author,
-      publishDate,
-      featuredImage,
-      paragraphs: contentParagraphs,
-      platform: 'Medium'
-    };
-  }
-};
-
-// Substack scraper
-const substackScraper: PlatformScraper = {
-  detect: (url: string) => {
-    return url.includes('substack.com') || url.includes('.substack.com');
-  },
-  scrape: (url: string, $: CheerioAPI) => {
-    const title = $('h1.post-title').text().trim() ||
-                  $('h1').first().text().trim() ||
-                  $('meta[property="og:title"]').attr('content') || '';
-    
-    const author = $('.author-name').text().trim() ||
-                   $('meta[name="author"]').attr('content') ||
-                   $('.publication-name').text().trim() || '';
-    
-    const publishDate = $('time').attr('datetime') ||
-                        $('meta[property="article:published_time"]').attr('content') || null;
-    
-    const featuredImage = $('meta[property="og:image"]').attr('content') ||
-                          $('.post-hero img').attr('src') || null;
-    
-    const contentParagraphs: string[] = [];
-    
-    // Substack content is typically in .body or .post-content
-    $('.body p, .body h2, .body h3, .body blockquote, .post-content p, .post-content h2, .post-content h3').each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 10) {
-        contentParagraphs.push(text);
-      }
-    });
-    
-    return {
-      title,
-      author,
-      publishDate,
-      featuredImage,
-      paragraphs: contentParagraphs,
-      platform: 'Substack'
-    };
-  }
-};
-
-// WordPress scraper
-const wordpressScraper: PlatformScraper = {
-  detect: (url: string, $: CheerioAPI) => {
-    // Check for WordPress meta tags or common WordPress patterns
-    return $('meta[name="generator"]').attr('content')?.includes('WordPress') ||
-           $('link[rel="https://api.w.org/"]').length > 0 ||
-           $('.wp-content').length > 0 ||
-           $('body').hasClass('wordpress');
-  },
-  scrape: (url: string, $: CheerioAPI) => {
-    const title = $('h1.entry-title').text().trim() ||
-                  $('h1.post-title').text().trim() ||
-                  $('article h1').text().trim() ||
-                  $('meta[property="og:title"]').attr('content') || '';
-    
-    const author = $('.author a').text().trim() ||
-                   $('meta[name="author"]').attr('content') ||
-                   $('.entry-author').text().trim() || '';
-    
-    const publishDate = $('time.entry-date').attr('datetime') ||
-                        $('meta[property="article:published_time"]').attr('content') || null;
-    
-    const featuredImage = $('meta[property="og:image"]').attr('content') ||
-                          $('.wp-post-image').attr('src') ||
-                          $('article img').first().attr('src') || null;
-    
-    const contentParagraphs: string[] = [];
-    
-    // WordPress content selectors
-    $('.entry-content p, .entry-content h2, .entry-content h3, .post-content p, article p, article h2, article h3').each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 10) {
-        contentParagraphs.push(text);
-      }
-    });
-    
-    return {
-      title,
-      author,
-      publishDate,
-      featuredImage,
-      paragraphs: contentParagraphs,
-      platform: 'WordPress'
-    };
-  }
-};
-
-// Ghost scraper
-const ghostScraper: PlatformScraper = {
-  detect: (url: string, $: CheerioAPI) => {
-    return $('meta[name="generator"]').attr('content')?.includes('Ghost') ||
-           $('link[rel="icon"]').attr('href')?.includes('ghost') ||
-           $('.gh-content').length > 0;
-  },
-  scrape: (url: string, $: CheerioAPI) => {
-    const title = $('h1.article-title').text().trim() ||
-                  $('h1.post-full-title').text().trim() ||
-                  $('h1').first().text().trim() ||
-                  $('meta[property="og:title"]').attr('content') || '';
-    
-    const author = $('.author-name').text().trim() ||
-                   $('meta[name="author"]').attr('content') ||
-                   $('.post-full-meta-date a').text().trim() || '';
-    
-    const publishDate = $('time').attr('datetime') ||
-                        $('meta[property="article:published_time"]').attr('content') || null;
-    
-    const featuredImage = $('meta[property="og:image"]').attr('content') ||
-                          $('.post-full-image img').attr('src') ||
-                          $('.article-image img').attr('src') || null;
-    
-    const contentParagraphs: string[] = [];
-    
-    // Ghost content selectors
-    $('.post-content p, .post-content h2, .post-content h3, .gh-content p, .gh-content h2, .gh-content h3, .article-content p').each((_, el) => {
-      const text = $(el).text().trim();
-      if (text && text.length > 10) {
-        contentParagraphs.push(text);
-      }
-    });
-    
-    return {
-      title,
-      author,
-      publishDate,
-      featuredImage,
-      paragraphs: contentParagraphs,
-      platform: 'Ghost'
-    };
-  }
-};
-
-// Generic fallback scraper
-const genericScraper: PlatformScraper = {
-  detect: () => true, // Always matches as fallback
-  scrape: (url: string, $: CheerioAPI) => {
-    // Try common title patterns
-    const title = $('h1').first().text().trim() ||
-                  $('meta[property="og:title"]').attr('content') ||
-                  $('title').text().trim() || '';
-    
-    // Try common author patterns
-    const author = $('meta[name="author"]').attr('content') ||
-                   $('[rel="author"]').text().trim() ||
-                   $('[class*="author"]').first().text().trim() ||
-                   $('[itemprop="author"]').text().trim() || '';
-    
-    const publishDate = $('meta[property="article:published_time"]').attr('content') ||
-                        $('time').first().attr('datetime') ||
-                        $('[itemprop="datePublished"]').attr('content') || null;
-    
-    const featuredImage = $('meta[property="og:image"]').attr('content') ||
-                          $('article img').first().attr('src') ||
-                          $('main img').first().attr('src') || null;
-    
-    const contentParagraphs: string[] = [];
-    
-    // Try to find the main content area
-    const mainContent = $('article').length ? $('article') :
-                        $('[role="main"]').length ? $('[role="main"]') :
-                        $('main').length ? $('main') :
-                        $('#content').length ? $('#content') :
-                        $('.content').length ? $('.content') :
-                        $('[class*="post"]').first().length ? $('[class*="post"]').first() :
-                        $('[class*="article"]').first().length ? $('[class*="article"]').first() :
-                        $('body');
-    
-    // First try standard paragraph tags
-    mainContent.find('p, h2, h3, h4, blockquote, section, article').each((_, el) => {
-      // Don't grab text from containers if they have children we will process
-      if (['SECTION', 'ARTICLE', 'DIV'].includes(el.tagName.toUpperCase()) && $(el).find('p, h2, h3, h4').length > 0) {
-        return;
-      }
-
-      const text = $(el).text().trim();
-      // Filter out very short paragraphs and navigation/footer text
-      if (text && text.length > 30 && 
-          !text.includes('©') && 
-          !text.includes('cookie') && 
-          !text.startsWith('Follow') &&
-          !text.includes('Sign up')) {
-        contentParagraphs.push(text);
-      }
-    });
-    
-    // If no paragraphs found, try extracting from font tags or raw text (legacy HTML like paulgraham.com)
-    if (contentParagraphs.length === 0) {
-      // Look for font tags (legacy HTML)
-      const fontContent = mainContent.find('font[size="2"]');
-      if (fontContent.length > 0) {
-        // Get the HTML and split by <br><br> patterns
-        let html = fontContent.html() || '';
-        // Clean up the HTML - remove tags and split by double line breaks
-        html = html
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/?[^>]+(>|$)/g, ' ')  // Remove remaining HTML tags
-          .replace(/\s+/g, ' ');  // Normalize whitespace
-        
-        // Split into paragraphs by double newlines
-        const parts = html.split(/\n\s*\n/);
-        for (const part of parts) {
-          const text = part.trim();
-          if (text && text.length > 50 && !text.includes('©')) {
-            contentParagraphs.push(text);
-          }
-        }
-      }
-      
-      // If still no content, try table cells (some legacy sites use tables for layout)
-      if (contentParagraphs.length === 0) {
-        mainContent.find('td').each((_, el) => {
-          const text = $(el).text().trim();
-          if (text && text.length > 100 && !text.includes('©')) {
-            // Split long text blocks by sentences into reasonable paragraphs
-            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-            let paragraph = '';
-            for (const sentence of sentences) {
-              const trimmedSentence = sentence.trim();
-              if (trimmedSentence) {
-                paragraph += (paragraph ? ' ' : '') + trimmedSentence;
-              }
-              // Create a new paragraph every ~500 chars
-              if (paragraph.length > 500) {
-                contentParagraphs.push(paragraph);
-                paragraph = '';
-              }
-            }
-            if (paragraph.trim().length > 50) {
-              contentParagraphs.push(paragraph.trim());
-            }
-          }
-        });
-      }
-    }
-    
-    return {
-      title,
-      author,
-      publishDate,
-      featuredImage,
-      paragraphs: contentParagraphs,
-      platform: 'Custom'
-    };
-  }
-};
-
-// Ordered list of scrapers (most specific first)
-const scrapers: PlatformScraper[] = [
-  mediumScraper,
-  substackScraper,
-  ghostScraper,
-  wordpressScraper,
-  genericScraper
-];
-
 function calculateReadTime(wordCount: number): string {
   const wordsPerMinute = 200;
   const minutes = Math.ceil(wordCount / wordsPerMinute);
   return `${minutes} min read`;
 }
 
-export async function scrapeUrl(url: string): Promise<ScrapedContent> {
-  // Fetch the HTML
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
-      'Sec-Ch-Ua': '"Not A(Bit:Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
-      'Sec-Ch-Ua-Mobile': '?0',
-      'Sec-Ch-Ua-Platform': '"Windows"',
-    }
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
-  }
-  
-  const html = await response.text();
-  const $ = load(html);
-  
-  // Find the appropriate scraper
-  let scraperResult: Partial<ScrapedContent> = {};
-  let detectedPlatform = 'Custom';
-  
-  for (const scraper of scrapers) {
-    // Skip generic scraper in the first pass
-    if (scraper === genericScraper) continue;
+async function fetchWithBrowserbase(url: string, retryCount = 0): Promise<{ html: string; browserText: string; featuredImage: string | null }> {
+  const apiKey = process.env.BROWSERBASE_API_KEY;
+  const projectId = process.env.BROWSERBASE_PROJECT_ID;
 
-    if (scraper.detect(url, $)) {
-      const result = scraper.scrape(url, $);
-      detectedPlatform = result.platform || 'Custom';
+  if (!apiKey || !projectId) {
+    console.warn('BROWSERBASE_API_KEY or BROWSERBASE_PROJECT_ID not set');
+    throw new Error('Headless browser required but Browserbase credentials missing');
+  }
+
+  const bb = new Browserbase({
+    apiKey,
+  });
+
+  let browser = null;
+  let sessionId: string | null = null;
+
+  try {
+    // 1. Create a session
+    const session = await bb.sessions.create({
+      projectId,
+      proxies: false,
+    });
+    sessionId = session.id;
+
+    console.log(`Created Browserbase session: ${sessionId}`);
+
+    // 2. Connect using Playwright with timeout
+    const connectUrl = `wss://connect.browserbase.com?apiKey=${apiKey}&sessionId=${sessionId}`;
+    
+    // Add a connection timeout
+    const connectionPromise = chromium.connectOverCDP(connectUrl);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timeout')), 15000)
+    );
+    
+    browser = await Promise.race([connectionPromise, timeoutPromise]) as any;
+
+    // 3. Get the default context and page
+    const defaultContext = browser.contexts()[0];
+    const page = defaultContext.pages()[0] || await defaultContext.newPage();
+
+    // 4. Navigate to the URL with a more lenient wait strategy
+    console.log(`Navigating to: ${url}`);
+    await page.goto(url, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 30000 
+    });
+
+    // Check if this is a Notion page by inspecting the actual page content
+    const isNotion = await page.evaluate(() => {
+      return document.documentElement.classList.contains('notion-html') ||
+             document.querySelector('[data-notion-html]') !== null ||
+             document.body?.classList.contains('notion-body') !== undefined ||
+             window.location.hostname.includes('notion');
+    });
+    
+    console.log(`Is Notion page: ${isNotion}`);
+
+    if (isNotion) {
+      console.log('Detected Notion page, waiting for content to load...');
+      try {
+        // Wait for either Notion blocks or significant body content
+        await page.waitForSelector('[data-block-id], .notion-page-content', { timeout: 15000 });
+        console.log('Notion selector found, waiting for content to render...');
+        // Give Notion extra time to fully render all content
+        await page.waitForTimeout(5000);
+      } catch (e) {
+        console.log('Notion selector wait failed, trying general wait...');
+        await page.waitForTimeout(8000);
+      }
+    } else {
+      // Wait a bit for JavaScript to execute
+      await page.waitForTimeout(3000);
+    }
+
+    // 5. Get the HTML content AND extract text directly
+    const html = await page.content();
+    console.log(`Fetched HTML, length: ${html.length}`);
+    
+    // Get the rendered text content directly from the browser, preserving paragraph structure
+    const browserText = await page.evaluate(() => {
+      const textBlocks: string[] = [];
+      const seenTexts = new Set<string>();
       
-      if (result.paragraphs && result.paragraphs.length > 0) {
-        scraperResult = result;
-        break;
-      } else {
-        // Matched but no content, save metadata and try others
-        scraperResult = { ...scraperResult, ...result };
+      // Strategy: Only get LEAF-level text blocks (blocks that don't contain other blocks)
+      // This prevents parent blocks from duplicating child content
+      
+      // For Notion pages: get leaf-level [data-block-id] elements
+      const notionBlocks = document.querySelectorAll('[data-block-id]');
+      if (notionBlocks.length > 0) {
+        notionBlocks.forEach(block => {
+          // Only get leaf blocks (no child blocks inside)
+          const hasChildBlocks = block.querySelector('[data-block-id]');
+          if (hasChildBlocks) return; // Skip parent blocks
+          
+          const text = block.textContent?.trim();
+          if (text && text.length > 10 && !seenTexts.has(text)) {
+            seenTexts.add(text);
+            textBlocks.push(text);
+          }
+        });
+      }
+      
+      // If Notion blocks didn't give us enough, try standard HTML elements
+      if (textBlocks.length < 3) {
+        const elements = document.querySelectorAll('p, h1, h2, h3, h4, blockquote, li');
+        elements.forEach(el => {
+          // Skip if inside nav, header, footer
+          if (el.closest('nav, header, footer, .sidebar, .comments')) return;
+          
+          const text = el.textContent?.trim();
+          if (text && text.length > 10 && !seenTexts.has(text)) {
+            seenTexts.add(text);
+            textBlocks.push(text);
+          }
+        });
+      }
+      
+      // If we got structured blocks, return them joined with double newlines
+      if (textBlocks.length > 0) {
+        return textBlocks.join('\n\n');
+      }
+      
+      // Otherwise fall back to innerText (preserves visual line breaks)
+      return document.body?.innerText || '';
+    });
+    console.log(`Body text from browser: ${browserText.length} chars`);
+    
+    // Extract the first meaningful image from the page
+    const featuredImage = await page.evaluate(() => {
+      // Look for og:image first
+      const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+      if (ogImage) return ogImage;
+      
+      // Look for the first large image in the content
+      const images = document.querySelectorAll('img');
+      for (const img of Array.from(images)) {
+        const src = img.src || img.getAttribute('data-src');
+        // Skip small images (likely icons or avatars)
+        if (src && img.naturalWidth > 200 && img.naturalHeight > 200) {
+          return src;
+        }
+      }
+      
+      // Fallback to first image with reasonable src
+      for (const img of Array.from(images)) {
+        const src = img.src || img.getAttribute('data-src');
+        if (src && !src.includes('icon') && !src.includes('avatar') && !src.includes('logo')) {
+          return src;
+        }
+      }
+      
+      return null;
+    });
+    console.log(`Featured image: ${featuredImage || 'none found'}`);
+
+    return { html, browserText, featuredImage };
+  } catch (error: any) {
+    console.error('Browserbase fetch error:', error);
+    
+    // Handle rate limiting
+    if (error?.message?.includes('429') && retryCount < 2) {
+      console.log(`Browserbase rate limited (429), retrying in 5s... (Attempt ${retryCount + 1})`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      return fetchWithBrowserbase(url, retryCount + 1);
+    }
+    throw new Error(`Browserbase error: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    // Cleanup: Close browser connection
+    if (browser) {
+      try {
+        await browser.close();
+        console.log('Browser connection closed');
+      } catch (e) {
+        console.warn('Failed to close browser:', e);
       }
     }
   }
+}
+
+export async function scrapeUrl(url: string): Promise<ScrapedContent> {
+  let html = '';
+  let browserText = ''; // Store text extracted directly from browser
+  let browserImage: string | null = null; // Store image extracted from browser
   
-  // If we still have no paragraphs, use the generic scraper
-  if (!scraperResult.paragraphs || scraperResult.paragraphs.length === 0) {
-    const genericResult = genericScraper.scrape(url, $);
-    scraperResult = {
-      ...genericResult, // Take title/author/etc from generic if not found yet
-      ...scraperResult, // Keep specific metadata if we had it
-      paragraphs: genericResult.paragraphs // But definitely take the paragraphs found by generic
-    };
-  }
-  
-  // If we still have no paragraphs, the genericScraper (which is last) will run
-  // but we need to make sure we don't skip it if a previous scraper matched but found nothing
-  
-  // Deduplicate paragraphs and trim them
-  const rawParagraphs = scraperResult.paragraphs || [];
-  const seen = new Set<string>();
-  const paragraphs: string[] = [];
-  
-  for (const p of rawParagraphs) {
-    const trimmed = p.trim();
-    if (!trimmed) continue;
+  try {
+    // Attempt 1: Static Fetch
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+      }
+    });
     
-    const normalized = trimmed.toLowerCase();
-    if (!seen.has(normalized)) {
-      seen.add(normalized);
-      paragraphs.push(trimmed);
+    if (response.ok) {
+      html = await response.text();
+      console.log(`Static fetch successful, HTML length: ${html.length}`);
+      
+      // Only use Browserbase if we get very little HTML or clear signs of JS-only rendering
+      const needsBrowser = (
+        html.length < 2000 || 
+        (html.includes('JavaScript must be enabled') || html.includes('enable JavaScript')) ||
+        (html.includes('id="app"') && html.length < 5000) ||
+        (html.includes('id="root"') && html.length < 5000)
+      );
+
+      if (needsBrowser) {
+        console.log(`Site requires JavaScript rendering, trying Browserbase...`);
+        const result = await fetchWithBrowserbase(url);
+        html = result.html;
+        browserText = result.browserText;
+        browserImage = result.featuredImage;
+        console.log(`Browserbase fetch successful, HTML length: ${html.length}, browser text: ${browserText.length}`);
+      }
+    } else {
+      console.log(`Static fetch failed (${response.status}), trying Browserbase...`);
+      const result = await fetchWithBrowserbase(url);
+      html = result.html;
+      browserText = result.browserText;
+      browserImage = result.featuredImage;
     }
+  } catch (error) {
+    console.log('Static fetch error, falling back to Browserbase:', error);
+    const result = await fetchWithBrowserbase(url);
+    html = result.html;
+    browserText = result.browserText;
+    browserImage = result.featuredImage;
   }
-  
-  // Combine paragraphs into full content
-  const content = paragraphs.join('\n\n');
-  const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
-  
+
+  // Use Readability to extract metadata (title, author) from HTML
+  const dom = new JSDOM(html, { url });
+  const reader = new Readability(dom.window.document.cloneNode(true) as any);
+  let article = reader.parse();
+
+  let paragraphs: string[] = [];
+  let title = 'Untitled';
+  let author = 'Unknown Author';
+  let textContent = '';
+
+  // Extract title and author from Readability or DOM
+  if (article) {
+    title = article.title || 'Untitled';
+    author = article.byline || 'Unknown Author';
+  }
+  if (title === 'Untitled') {
+    const doc = dom.window.document;
+    title = doc.querySelector('h1')?.textContent?.trim() || 
+            doc.querySelector('title')?.textContent?.trim() || 
+            'Untitled';
+  }
+
+  // PRIORITY 1: Use browserText if available (best paragraph structure from rendered page)
+  if (browserText && browserText.length > 200) {
+    console.log(`Using browser-extracted text for paragraphs: ${browserText.length} chars`);
+    
+    // browserText is already split by \n\n between blocks
+    const textBlocks = browserText
+      .split(/\n\n+/)
+      .map(t => t.replace(/\s+/g, ' ').trim())
+      .filter(t => {
+        if (t.length < 20) return false;
+        // Filter out navigation/UI chrome
+        const lower = t.toLowerCase();
+        if (/^(menu|navigation|footer|header|sidebar|cookie|subscribe|sign up|log in|share|search)/i.test(lower.slice(0, 30))) return false;
+        return true;
+      });
+    
+    console.log(`Browser text split into ${textBlocks.length} paragraphs`);
+    paragraphs = textBlocks;
+    textContent = textBlocks.join('\n\n');
+  }
+  // PRIORITY 2: Use Readability textContent
+  else if (article && article.textContent && article.textContent.length > 500) {
+    console.log('Using Readability for paragraph extraction');
+    textContent = article.textContent;
+    paragraphs = textContent
+      .split(/\n\n+|\n(?=[A-Z])/)  // Split on double newlines OR single newline before capital letter
+      .map(p => p.trim())
+      .filter(p => p.length > 30);
+    
+    // If we got too few paragraphs (text may be joined), try splitting on single newlines
+    if (paragraphs.length < 3 && textContent.length > 1000) {
+      paragraphs = textContent
+        .split('\n')
+        .map(p => p.trim())
+        .filter(p => p.length > 30);
+    }
+    console.log(`Readability extracted ${paragraphs.length} paragraphs`);
+  }
+  // PRIORITY 3: Manual DOM extraction fallback
+  else {
+    console.log('Readability and browserText insufficient, using manual DOM extraction...');
+    const doc = dom.window.document;
+    
+    const parts: string[] = [];
+    const seenTexts = new Set<string>();
+    
+    // Get leaf-level content elements
+    const elements = doc.querySelectorAll('p, blockquote, h1, h2, h3, h4, li, article p, main p');
+    elements.forEach((el: any) => {
+      // Skip nav/footer elements
+      if (el.closest && el.closest('nav, header, footer, .sidebar, .comments')) return;
+      
+      let text = el.textContent?.trim().replace(/\s+/g, ' ');
+      if (!text || text.length < 20) return;
+      if (seenTexts.has(text)) return;
+      
+      seenTexts.add(text);
+      parts.push(text);
+    });
+    
+    paragraphs = parts;
+    textContent = parts.join('\n\n');
+    console.log(`Manual extraction: ${paragraphs.length} paragraphs, ${textContent.length} chars`);
+  }
+
+  if (paragraphs.length === 0) {
+    throw new Error('Could not extract any content from this page');
+  }
+
+  const wordCount = textContent.split(/\s+/).filter(w => w.length > 0).length;
+
+  let platform = 'Custom';
+  if (url.includes('medium.com')) platform = 'Medium';
+  else if (url.includes('substack.com')) platform = 'Substack';
+  else if (url.includes('wordpress.com')) platform = 'WordPress';
+  else if (url.includes('ghost.io')) platform = 'Ghost';
+  else if (html.includes('wp-content')) platform = 'WordPress';
+
   return {
-    title: scraperResult.title || 'Untitled',
-    author: scraperResult.author || 'Unknown Author',
-    publishDate: scraperResult.publishDate || null,
-    featuredImage: scraperResult.featuredImage || null,
-    content,
+    title: title || 'Untitled',
+    author: author || 'Unknown Author',
+    publishDate: null, 
+    featuredImage: browserImage || (dom.window.document.querySelector('meta[property="og:image"]') as any)?.content || null,
+    content: textContent,
     paragraphs,
     wordCount,
     estimatedReadTime: calculateReadTime(wordCount),
-    platform: detectedPlatform,
+    platform,
     url
   };
 }
+
+
