@@ -6,7 +6,7 @@ import Link from "next/link";
 
 interface FloatingShape {
   id: number;
-  type: "rect-h" | "rect-v" | "square" | "triangle";
+  type: "rect-h" | "rect-v" | "square" | "triangle" | "circle" | "trapezoid";
   color: string;
   width: number;
   height: number;
@@ -16,6 +16,8 @@ interface FloatingShape {
   duration: number;
   delay: number;
   animation: "spin" | "tilt" | "wobble";
+  skewLeft?: number; // For non-isosceles trapezoids
+  skewRight?: number; // For non-isosceles trapezoids
 }
 
 const colors = [
@@ -31,7 +33,7 @@ const colors = [
 
 function generateShapes(count: number): FloatingShape[] {
   const shapes: FloatingShape[] = [];
-  const types: FloatingShape["type"][] = ["rect-h", "rect-v", "square", "triangle"];
+  const types: FloatingShape["type"][] = ["rect-h", "rect-v", "square", "triangle", "circle", "trapezoid"];
   const animations: FloatingShape["animation"][] = ["spin", "tilt", "wobble"];
   
   for (let i = 0; i < count; i++) {
@@ -40,17 +42,19 @@ function generateShapes(count: number): FloatingShape[] {
     
     switch (type) {
       case "square":
-        const squareSize = 40 + Math.random() * 100;
+      case "circle":
+        const squareSize = 40 + Math.random() * 80;
         width = squareSize;
         height = squareSize;
         break;
       case "rect-h": // horizontal rectangle
-        width = 80 + Math.random() * 150;
-        height = 15 + Math.random() * 40;
+      case "trapezoid":
+        width = 80 + Math.random() * 120;
+        height = 20 + Math.random() * 40;
         break;
       case "rect-v": // vertical rectangle
-        width = 15 + Math.random() * 40;
-        height = 80 + Math.random() * 150;
+        width = 20 + Math.random() * 40;
+        height = 80 + Math.random() * 120;
         break;
       case "triangle":
         width = 50 + Math.random() * 80;
@@ -73,6 +77,8 @@ function generateShapes(count: number): FloatingShape[] {
       duration: 15 + Math.random() * 25,
       delay: Math.random() * -15,
       animation: animations[Math.floor(Math.random() * animations.length)],
+      skewLeft: type === "trapezoid" ? 0.1 + Math.random() * 0.3 : undefined,
+      skewRight: type === "trapezoid" ? 0.1 + Math.random() * 0.3 : undefined,
     });
   }
   return shapes;
@@ -86,7 +92,7 @@ export default function Home() {
   const [marginBottom, setMarginBottom] = useState(2);
 
   useEffect(() => {
-    setShapes(generateShapes(12));
+    setShapes(generateShapes(15));
 
     const handleScroll = () => {
       const scrollY = window.scrollY;
@@ -151,12 +157,27 @@ export default function Home() {
             style={{
               left: `${shape.x}%`,
               top: `${shape.y}%`,
-              width: shape.type === "triangle" ? 0 : shape.width,
-              height: shape.type === "triangle" ? 0 : shape.height,
-              backgroundColor: shape.type === "triangle" ? "transparent" : shape.color,
-              borderLeft: shape.type === "triangle" ? `${shape.width / 2}px solid transparent` : undefined,
-              borderRight: shape.type === "triangle" ? `${shape.width / 2}px solid transparent` : undefined,
-              borderBottom: shape.type === "triangle" ? `${shape.height}px solid ${shape.color}` : undefined,
+              width: (shape.type === "triangle") 
+                ? 0 
+                : shape.type === "trapezoid" 
+                  ? shape.width * (1 - (shape.skewLeft || 0.2) - (shape.skewRight || 0.2))
+                  : shape.width,
+              height: (shape.type === "triangle" || shape.type === "trapezoid") ? 0 : shape.height,
+              backgroundColor: (shape.type === "triangle" || shape.type === "trapezoid") ? "transparent" : shape.color,
+              borderRadius: shape.type === "circle" ? "50%" : undefined,
+              borderLeft: shape.type === "triangle" 
+                ? `${shape.width / 2}px solid transparent` 
+                : shape.type === "trapezoid"
+                  ? `${shape.width * (shape.skewLeft || 0.2)}px solid transparent`
+                  : undefined,
+              borderRight: shape.type === "triangle" 
+                ? `${shape.width / 2}px solid transparent` 
+                : shape.type === "trapezoid"
+                  ? `${shape.width * (shape.skewRight || 0.2)}px solid transparent`
+                  : undefined,
+              borderBottom: shape.type === "triangle" || shape.type === "trapezoid"
+                ? `${shape.height}px solid ${shape.color}` 
+                : undefined,
               opacity: 0.85,
               animationDuration: `${shape.duration}s`,
               animationDelay: `${shape.delay}s`,
