@@ -112,10 +112,11 @@ export async function generateSpeech(
     },
     body: JSON.stringify({
       text,
-      model_id: options?.modelId || 'eleven_monolingual_v1',
+      model_id: options?.modelId || 'eleven_v3',
       voice_settings: {
-        stability: options?.stability || 0.5,
+        stability: options?.stability || 1.0,
         similarity_boost: options?.similarityBoost || 0.75,
+        style: 0,
       },
     }),
   });
