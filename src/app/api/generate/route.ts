@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Prepare Pause task
-    const pauseTask = generateSpeech(" . . ", validSegments[0].voiceId); // ~0.5s pause to reuse
+    const pauseTask = generateSpeech(" . . . . . ", validSegments[0].voiceId); // ~1s pause to reuse
 
     // Execute tasks with concurrency control to avoid ElevenLabs 429 errors
     console.log('Executing ElevenLabs requests in controlled batches...');
@@ -179,7 +179,8 @@ export async function POST(request: NextRequest) {
           image_url: r2ImageUrl, // Use the R2 image URL for better reliability
           duration: Math.round(finalBuffer.length / 16000), // Very rough estimate
           file_size: finalBuffer.length, // Exact byte size for RSS enclosure
-          source_url: metadata?.url || null // Save source URL for redundancy checks
+          source_url: metadata?.url || null, // Save source URL for redundancy checks
+          voice_id: validSegments[0]?.voiceId || null // Save the primary narrator's voice ID
         });
 
       if (episodeError) throw episodeError;

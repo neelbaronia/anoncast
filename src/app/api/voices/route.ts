@@ -18,10 +18,12 @@ export async function GET() {
       return NextResponse.json({
         success: true,
         voices: [
-          { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', description: 'Clear, engaging educator', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/Xb7hH8MSUJpSbSDYk0k2/d10f7534-11f6-41fe-a012-2de1e482d336.mp3', category: 'premade', gender: 'female' },
-          { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', description: 'Mature, reassuring, confident', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3', category: 'premade', gender: 'female' },
-          { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie', description: 'Deep, confident, energetic', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/IKne3meq5aSn9XLyUdCD/102de6f2-22ed-43e0-a1f1-111fa75c5481.mp3', category: 'premade', gender: 'male' },
-          { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George', description: 'Warm, captivating storyteller', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/JBFqnCBsd6RMkjVDRZzb/e6206d1a-0721-4787-aafb-06a6e705cac5.mp3', category: 'premade', gender: 'male' },
+          { id: 'nPczCjzB2jt3Y8E44X7V', name: 'Brian', description: 'Deep, narrative, American', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/nPczCjzB2jt3Y8E44X7V/ad605336-68b6-455b-9d41-1efd75e01c90.mp3', category: 'premade', gender: 'male' },
+          { id: 'XrExqIDj70D1i6ec7O3X', name: 'Matilda', description: 'Warm, narrative, American', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/XrExqIDj70D1i6ec7O3X/264b3607-4228-403d-82c5-59b3f99056a2.mp3', category: 'premade', gender: 'female' },
+          { id: 'GBv7mTt0atIp3Br8iCZE', name: 'Thomas', description: 'Calm, narrative, American', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/GBv7mTt0atIp3Br8iCZE/f311c97a-e47f-4cc3-94c6-81676f1c7137.mp3', category: 'premade', gender: 'male' },
+          { id: 'Lcf713o6okCna69XvIpg', name: 'Emily', description: 'Clear, narrative, American', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/Lcf713o6okCna69XvIpg/2d744883-7e4a-4a8a-9214-55447195f242.mp3', category: 'premade', gender: 'female' },
+          { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', description: 'Relaxed, narrative, American', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/TX3LPaxmHKxFdv7VOQHJ/63148076-6363-42db-aea8-31424308b92c.mp3', category: 'premade', gender: 'male' },
+          { id: '9BWtsm6S9Dshv8T8v8Kz', name: 'Aria', description: 'Clean, neutral, American', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/9BWtsm6S9Dshv8T8v8Kz/2d744883-7e4a-4a8a-9214-55447195f242.mp3', category: 'premade', gender: 'female' },
         ],
         mock: true,
       });

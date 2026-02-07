@@ -43,6 +43,33 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
     },
   });
 
+  const preferredIds = [
+    'nPczCjzB2jt3Y8E44X7V', // Brian - Narrative
+    'XrExqIDj70D1i6ec7O3X', // Matilda - Warm
+    'TX3LPaxmHKxFdv7VOQHJ', // Liam - Relaxed Narration (Real ID)
+    'XB0fDUnXUByWwe3D96u1', // Charlotte - Polite Narrative
+    'iP95p4xo9A9EJ9696K7K', // Chris - Storyteller
+    '9BWtsm6S9Dshv8T8v8Kz', // Aria - Clean
+    'GBv7mTt0atIp3Br8iCZE', // Thomas - Calm Narrative
+    'Lcf713o6okCna69XvIpg', // Emily - Clear Narrative
+    'CwhRBWXzGAHq8TQ4Fs17', // Roger - Confident (Real ID)
+    'cjVigLvcvMvS9S7fP5X7', // Eric - Narrative
+  ];
+
+  const excludedIds = [
+    'FGY2WhTYpPnrIDTdsKH5', // Laura (ID 1)
+    'FGY2WhTYp9z6o5v7v7Kz', // Laura (ID 2)
+    'IKne3meq5aSn9XLyUdCD', // Charlie
+    'JBFqnCBsd6RMkjVDRZzb', // George
+    'Xb7hH8MSUJpSbSDYk0k2', // Alice
+    'EXAVITQu4vr4xnSDxMaL', // Sarah
+    'SOYHLrjzK2X1ezoPC6cr', // Harry (Real ID)
+    'SOY-ID-HARRY',          // Harry (Placeholder)
+    'N2lVS1w4EtoT3dr4eOWO', // Callum (Real ID)
+    'N2lVS1wzCQmX96OT7sSj', // Callum (ID 2)
+    'SAz9YHcvj6GT2YYXdXww', // River (Real ID)
+  ];
+
   if (!response.ok) {
     // If API key doesn't have permission, fall back to public API
     const publicResponse = await fetch(`${ELEVENLABS_API_URL}/voices`);
@@ -51,9 +78,11 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
     }
     const publicData = await publicResponse.json();
     const publicVoices: ElevenLabsVoice[] = publicData.voices || [];
-    const selectedIds = ['Xb7hH8MSUJpSbSDYk0k2', 'EXAVITQu4vr4xnSDxMaL', 'IKne3meq5aSn9XLyUdCD', 'JBFqnCBsd6RMkjVDRZzb'];
+    
     return publicVoices
-      .filter(v => selectedIds.includes(v.voice_id))
+      .filter(v => preferredIds.includes(v.voice_id) && !excludedIds.includes(v.voice_id))
+      .sort((a, b) => preferredIds.indexOf(a.voice_id) - preferredIds.indexOf(b.voice_id))
+      .slice(0, 6)
       .map(v => ({
         id: v.voice_id,
         name: v.name,
@@ -68,29 +97,33 @@ export async function fetchVoices(): Promise<VoiceOption[]> {
   const data = await response.json();
   const voices: ElevenLabsVoice[] = data.voices;
 
-  // Filter to get the best pre-made voices and map to our format
-  // Prioritize "premade" category voices which are high-quality and free to use
-  // Specific voices we want to show
-  const selectedVoiceIds = [
-    'Xb7hH8MSUJpSbSDYk0k2', // Alice
-    'EXAVITQu4vr4xnSDxMaL', // Sarah
-    'IKne3meq5aSn9XLyUdCD', // Charlie
-    'JBFqnCBsd6RMkjVDRZzb', // George
-  ];
-  
-  const premadeVoices = voices
-    .filter(v => selectedVoiceIds.includes(v.voice_id))
-    .map(v => ({
-      id: v.voice_id,
-      name: v.name,
-      description: v.labels?.description || `${v.labels?.gender || ''} ${v.labels?.accent || ''} voice`.trim(),
-      previewUrl: v.preview_url,
-      category: v.category,
-      accent: v.labels?.accent,
-      gender: v.labels?.gender,
-    }));
+  // 1. First try to get our preferred voices that are actually available in the account
+  let selectedVoices = voices
+    .filter(v => preferredIds.includes(v.voice_id) && !excludedIds.includes(v.voice_id))
+    .sort((a, b) => preferredIds.indexOf(a.voice_id) - preferredIds.indexOf(b.voice_id));
 
-  return premadeVoices;
+  // 2. If we have fewer than 6, add other high-quality premade voices that aren't excluded
+  if (selectedVoices.length < 6) {
+    const otherPremade = voices
+      .filter(v => 
+        v.category === 'premade' && 
+        !preferredIds.includes(v.voice_id) && 
+        !excludedIds.includes(v.voice_id)
+      )
+      .slice(0, 6 - selectedVoices.length);
+    selectedVoices = [...selectedVoices, ...otherPremade];
+  }
+
+  // 3. Map to our format and ensure we only have 6
+  return selectedVoices.slice(0, 6).map(v => ({
+    id: v.voice_id,
+    name: v.name,
+    description: v.labels?.description || `${v.labels?.gender || ''} ${v.labels?.accent || ''} voice`.trim(),
+    previewUrl: v.preview_url,
+    category: v.category,
+    accent: v.labels?.accent,
+    gender: v.labels?.gender,
+  }));
 }
 
 export async function generateSpeech(
