@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { url } = body;
+    const { url, force } = body;
 
     if (!url) {
       return NextResponse.json(
@@ -27,28 +27,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for existing episode with this source_url
-    try {
-      // Check for exact match or normalized match
-      const { data: existingEpisode } = await supabase
-        .from('episodes')
-        .select('*')
-        .or(`source_url.eq."${url}",source_url.eq."${normalizedUrl}"`)
-        .order('published_at', { ascending: false })
-        .limit(1)
-        .single();
+    // Check for existing episode with this source_url (only if not forced)
+    if (!force) {
+      try {
+        // Check for exact match or normalized match
+        const { data: existingEpisode } = await supabase
+          .from('episodes')
+          .select('*')
+          .or(`source_url.eq."${url}",source_url.eq."${normalizedUrl}"`)
+          .order('published_at', { ascending: false })
+          .limit(1)
+          .single();
 
-      if (existingEpisode) {
-        console.log(`Found existing episode for URL: ${url}`);
-        return NextResponse.json({
-          success: true,
-          alreadyExists: true,
-          episode: existingEpisode
-        });
+        if (existingEpisode) {
+          console.log(`Found existing episode for URL: ${url}`);
+          return NextResponse.json({
+            success: true,
+            alreadyExists: true,
+            episode: existingEpisode
+          });
+        }
+      } catch (e) {
+        // Ignore error and proceed to scrape if check fails (e.g. column missing)
+        console.log('Existing episode check failed or no match found:', e);
       }
-    } catch (e) {
-      // Ignore error and proceed to scrape if check fails (e.g. column missing)
-      console.log('Existing episode check failed or no match found:', e);
     }
 
     // Scrape the URL

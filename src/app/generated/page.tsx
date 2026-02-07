@@ -101,6 +101,7 @@ interface Episode {
   display_image?: string | null;
   spotify_url?: string | null;
   apple_url?: string | null;
+  voice_id?: string | null;
 }
 
 export default function GeneratedBlogsPage() {

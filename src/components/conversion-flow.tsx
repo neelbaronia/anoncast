@@ -144,6 +144,7 @@ export function ConversionFlow() {
   const [audioDuration, setAudioDuration] = useState(0);
   const [isTestMode, setIsTestMode] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Track which image is selected as thumbnail
+  const [isRedundant, setIsRedundant] = useState(false); // Track if we skipped to publish because of a duplicate
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const totalWordCount = textSegments.reduce((acc, s) => acc + s.text.split(/\s+/).filter(w => w.length > 0).length, 0);
@@ -178,6 +179,10 @@ export function ConversionFlow() {
         if (savedSegments && savedStep === 'generate') {
           const segments = JSON.parse(savedSegments);
           setTextSegments(segments);
+          const savedIndex = localStorage.getItem('selected_image_index');
+          if (savedIndex !== null) {
+            setSelectedImageIndex(parseInt(savedIndex));
+          }
           if (savedPreview) {
             setPreviewData(JSON.parse(savedPreview));
           }
@@ -224,6 +229,10 @@ export function ConversionFlow() {
       
       const savedImages = localStorage.getItem('last_images');
       const images = savedImages ? JSON.parse(savedImages) : [];
+      const savedIndex = localStorage.getItem('selected_image_index');
+      if (savedIndex !== null) {
+        setSelectedImageIndex(parseInt(savedIndex));
+      }
       setPreviewData({
         title: lastTitle,
         author: localStorage.getItem('last_author') || '',
@@ -453,6 +462,7 @@ export function ConversionFlow() {
       // Save state to localStorage so we can resume after redirect
       localStorage.setItem('pending_segments', JSON.stringify(textSegments));
       localStorage.setItem('pending_step', 'generate');
+      localStorage.setItem('selected_image_index', selectedImageIndex.toString());
       if (previewData) {
         localStorage.setItem('pending_preview', JSON.stringify(previewData));
       }
@@ -545,11 +555,12 @@ export function ConversionFlow() {
     localStorage.setItem(`last_${field}`, value);
   };
 
-  const handleFetch = async () => {
+  const handleFetch = async (force = false) => {
     const currentUrl = (urlInputRef.current?.value || url).trim();
     if (!currentUrl) return;
     setIsLoading(true);
     setScrapeError(null);
+    setIsRedundant(false);
     setScrapeProgress('active'); // Set to active to trigger message rotation
     setScrapeProgressIndex(0);
     
@@ -557,7 +568,7 @@ export function ConversionFlow() {
       const response = await fetch('/api/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: currentUrl }),
+        body: JSON.stringify({ url: currentUrl, force }),
       });
       
       const result = await response.json();
@@ -571,6 +582,7 @@ export function ConversionFlow() {
         const ep = result.episode;
         setGeneratedAudioUrl(ep.audio_url);
         setShowId(ep.show_id || "00000000-0000-0000-0000-000000000000");
+        setIsRedundant(true);
         
         setPreviewData({
           title: ep.title,
@@ -607,6 +619,7 @@ export function ConversionFlow() {
 
       setPreviewData(scraped);
       setSelectedImageIndex(0); // Reset to first image
+      localStorage.setItem('selected_image_index', '0');
       setScrapeProgress(''); // Clear progress message when done
       
       // Secondary fallback storage for the final card and persistence
@@ -652,6 +665,7 @@ export function ConversionFlow() {
 
   const handleClearPreview = () => {
     setPreviewData(null);
+    setIsRedundant(false);
     setUrl("");
     if (urlInputRef.current) {
       urlInputRef.current.value = "";
@@ -726,7 +740,9 @@ export function ConversionFlow() {
             metadata: {
               title: previewData?.title || localStorage.getItem('last_title'),
               author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
-              image: selectedImageIndex >= 0 ? (previewData?.images?.[selectedImageIndex] || previewData?.featuredImage) : null,
+              image: selectedImageIndex >= 0 
+                ? (previewData?.images?.[selectedImageIndex] || previewData?.featuredImage || localStorage.getItem('last_image')) 
+                : 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg',
               url: previewData?.url || localStorage.getItem('last_url'),
               firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
             }
@@ -847,7 +863,7 @@ export function ConversionFlow() {
                   />
                   {(!previewData || isLoading) && !scrapeProgress && (
                     <Button 
-                      onClick={handleFetch}
+                      onClick={() => handleFetch()}
                       disabled={!url.trim() || isLoading}
                       className="h-11 px-6 bg-gray-900 hover:bg-gray-800 text-white"
                     >
@@ -1058,6 +1074,8 @@ export function ConversionFlow() {
                           key={idx}
                           onClick={() => {
                             setSelectedImageIndex(idx);
+                            localStorage.setItem('selected_image_index', idx.toString());
+                            localStorage.setItem('last_image', imgUrl);
                             // Also update featuredImage so it shows in the preview card
                             setPreviewData(prev => prev ? { ...prev, featuredImage: imgUrl } : prev);
                           }}
@@ -1089,6 +1107,8 @@ export function ConversionFlow() {
                       <button
                         onClick={() => {
                           setSelectedImageIndex(-1);
+                          localStorage.setItem('selected_image_index', '-1');
+                          localStorage.removeItem('last_image');
                           setPreviewData(prev => prev ? { ...prev, featuredImage: null } : prev);
                         }}
                         className={`
@@ -1788,13 +1808,27 @@ export function ConversionFlow() {
           {currentStep === "publish" && (
             <div className="space-y-4">
               <div className="text-center mb-4">
-                <div className="inline-flex items-center gap-2 text-green-600 mb-1">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-medium">Ready to publish</span>
-                </div>
-                <p className="text-gray-500 text-sm">
-                  Your audio is ready. Share it with the world.
-                </p>
+                {isRedundant ? (
+                  <div className="space-y-1 mb-2">
+                    <div className="inline-flex items-center gap-2 text-amber-600">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-bold">This blog has already been generated!</span>
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      Check it out at these sites
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="inline-flex items-center gap-2 text-green-600 mb-1">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-medium">Ready to publish</span>
+                    </div>
+                    <p className="text-gray-500 text-sm">
+                      Your audio is ready. Share it with the world.
+                    </p>
+                  </>
+                )}
               </div>
 
               {/* Audio Card */}
@@ -1934,7 +1968,17 @@ export function ConversionFlow() {
                 </Button>
               </div>
 
-              <div className="text-center pt-2">
+              <div className="text-center pt-2 space-y-3">
+                {isRedundant && (
+                  <Button
+                    onClick={() => handleFetch(true)}
+                    variant="outline"
+                    className="h-11 px-8 border-gray-200 text-gray-600 hover:bg-gray-50 font-bold text-sm w-full max-w-md mx-auto block"
+                  >
+                    <Mic className="w-4 h-4 mr-2" />
+                    Generate New Version
+                  </Button>
+                )}
                 <Button
                   onClick={() => {
                     setCurrentStep("input");
@@ -1944,6 +1988,7 @@ export function ConversionFlow() {
                     }
                     setGenerationProgress(0);
                     setPreviewData(null);
+                    setIsRedundant(false);
                     localStorage.removeItem('pending_preview');
                     localStorage.removeItem('pending_segments');
                     localStorage.removeItem('pending_step');
