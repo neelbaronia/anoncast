@@ -119,6 +119,7 @@ export function ConversionFlow() {
   }, [url]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationProgressDetail, setGenerationProgressDetail] = useState<{ done: number; total: number } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewData, setPreviewData] = useState<ScrapedContent | null>(null);
   const [textSegments, setTextSegments] = useState<TextSegment[]>([]);
@@ -687,25 +688,16 @@ export function ConversionFlow() {
   const handleGenerate = async (segmentsToUse = textSegments) => {
     setIsGenerating(true);
     setIsPlaying(false);
-    setGenerationProgress(5);
+    setGenerationProgress(0);
+    setGenerationProgressDetail(null);
     setGenerationError(null);
-    
-    // Simulate continuous progress
-    const progressInterval = setInterval(() => {
-      setGenerationProgress(prev => {
-        if (prev >= 96) return prev; // Hold at 96% until actual completion
-        // Slower, more continuous feeling: fast at first, then crawls
-        const increment = prev < 60 ? (Math.random() * 0.8 + 0.2) : (Math.random() * 0.2 + 0.05);
-        return Math.min(prev + increment, 96);
-      });
-    }, 500);
     
     try {
       let audioUrlToSet: string | null = null;
       let newShowId = null;
 
       if (DEMO_MODE) {
-        // Fetch most recent episode for demo purposes
+        setGenerationProgress(50);
         const episodesRes = await fetch('/api/episodes');
         const episodesData = await episodesRes.json();
         
@@ -714,14 +706,13 @@ export function ConversionFlow() {
           audioUrlToSet = latest.audio_url;
           newShowId = latest.show_id;
           
-          // Update preview data to match the "generated" episode for realism
           setPreviewData({
             title: latest.title,
             author: latest.show_author || 'anoncast.net',
             featuredImage: latest.display_image || latest.image_url,
             images: latest.image_url ? [latest.image_url] : [],
             url: latest.description.match(/Original blog: (https?:\/\/[^\s\n]+)/)?.[1] || '',
-            paragraphs: [], // Not needed for publish step
+            paragraphs: [],
             content: '',
             wordCount: 0,
             estimatedReadTime: '',
@@ -734,7 +725,10 @@ export function ConversionFlow() {
       } else {
         const response = await fetch('/api/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Stream-Progress': 'true',
+          },
           body: JSON.stringify({ 
             segments: segmentsToUse,
             metadata: {
@@ -750,39 +744,65 @@ export function ConversionFlow() {
         });
 
         if (!response.ok) {
-          clearInterval(progressInterval);
           const error = await response.json();
           throw new Error(error.error || 'Failed to generate audio');
         }
 
-        const blob = await response.blob();
-        audioUrlToSet = URL.createObjectURL(blob);
-        newShowId = response.headers.get('X-Show-Id');
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        if (!reader) throw new Error('No response body');
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const msg = JSON.parse(line);
+              if (msg.type === 'progress') {
+                setGenerationProgress(msg.percent);
+                setGenerationProgressDetail({ done: msg.done, total: msg.total });
+              } else if (msg.type === 'complete') {
+                const binary = Uint8Array.from(atob(msg.base64), c => c.charCodeAt(0));
+                const blob = new Blob([binary], { type: 'audio/mpeg' });
+                audioUrlToSet = URL.createObjectURL(blob);
+                newShowId = msg.showId;
+              } else if (msg.type === 'error') {
+                throw new Error(msg.error);
+              }
+            } catch (e) {
+              if (e instanceof SyntaxError) continue;
+              throw e;
+            }
+          }
+        }
       }
 
       if (audioUrlToSet) {
         setGeneratedAudioUrl(audioUrlToSet);
       }
       
-      // Capture showId from headers or demo data for RSS feed
       if (newShowId) {
         setShowId(newShowId);
         localStorage.setItem('last_show_id', newShowId);
       }
       
-      // Complete progress rapidly once file is ready
-      clearInterval(progressInterval);
       setGenerationProgress(100);
+      setGenerationProgressDetail(null);
       
       setTimeout(() => {
         setIsGenerating(false);
         setCurrentStep("publish");
       }, 600);
     } catch (error) {
-      clearInterval(progressInterval);
       console.error('Generation error:', error);
       setGenerationError(error instanceof Error ? error.message : 'Failed to generate audio');
       setIsGenerating(false);
+      setGenerationProgressDetail(null);
     }
   };
 
@@ -1897,7 +1917,17 @@ export function ConversionFlow() {
                       </div>
                     </div>
                     <p className="text-xs text-gray-500 mb-1">
-                      Estimated time: ~{Math.max(30, Math.ceil(textSegments.length / 5) * 15)}-{Math.max(60, Math.ceil(textSegments.length / 5) * 25)} seconds
+                      Estimated time: {(() => {
+                        const minSecs = Math.max(30, Math.ceil(textSegments.length / 5) * 15);
+                        const maxSecs = Math.max(60, Math.ceil(textSegments.length / 5) * 25);
+                        
+                        if (maxSecs >= 120) {
+                          const minMins = Math.floor(minSecs / 60);
+                          const maxMins = Math.ceil(maxSecs / 60);
+                          return `~${minMins}-${maxMins} minutes`;
+                        }
+                        return `~${minSecs}-${maxSecs} seconds`;
+                      })()}
                     </p>
                     <p className="text-[10px] text-amber-600 font-medium">
                       Note: Please stay on this page during generation.
@@ -1927,7 +1957,20 @@ export function ConversionFlow() {
                         <Progress value={generationProgress} className="h-2" />
                         <div className="flex flex-col items-center gap-2">
                           <p className="text-center text-sm font-medium text-gray-900">
-                            Generating audio... {Math.round(generationProgress)}%
+                            Generating audio...{" "}
+                            {generationProgressDetail ? (
+                              <>
+                                {generationProgressDetail.done > 3 ? (
+                                  <>
+                                    {generationProgressDetail.done - 3} of {generationProgressDetail.total - 3} paragraphs ({Math.round(generationProgress)}%)
+                                  </>
+                                ) : (
+                                  <>Preparing... ({Math.round(generationProgress)}%)</>
+                                )}
+                              </>
+                            ) : (
+                              `${Math.round(generationProgress)}%`
+                            )}
                           </p>
                           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold animate-pulse border border-amber-100 uppercase tracking-tight">
                             <Clock className="w-3 h-3" />
