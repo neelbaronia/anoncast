@@ -1,1 +1,1 @@
-export const BUY_MP3_LABEL = "Buy MP3 ($5)";
+export const PRICE_PER_MINUTE = 0.5; // $0.50 per minute of generated audio

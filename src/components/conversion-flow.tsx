@@ -27,7 +27,7 @@ import {
   Clock
 } from "lucide-react";
 
-import { BUY_MP3_LABEL } from "@/lib/constants";
+import { PRICE_PER_MINUTE } from "@/lib/constants";
 
 type Step = "input" | "review" | "generate" | "publish";
 
@@ -472,7 +472,7 @@ export function ConversionFlow() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          amount: audioLengthMins * 0.75,
+          amount: audioLengthMins * PRICE_PER_MINUTE,
           title: previewData?.title
         }),
       });
@@ -517,12 +517,14 @@ export function ConversionFlow() {
     setIsBuyingDownload(true);
     try {
       localStorage.setItem('pending_download_url', generatedAudioUrl);
-      
+      const downloadMins = audioDuration > 0 ? Math.ceil(audioDuration / 60) : audioLengthMins;
+      const amount = Math.max(0.5, downloadMins * PRICE_PER_MINUTE);
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          amount: 5,
+          amount,
           title: previewData?.title || localStorage.getItem('last_title'),
           type: 'download'
         }),
@@ -1011,7 +1013,7 @@ export function ConversionFlow() {
                   ) : (
                     <Download className="w-4 h-4 mr-2 text-gray-500" />
                   )}
-                  {BUY_MP3_LABEL}
+                  Buy MP3 (${(Math.max(0.5, (audioDuration > 0 ? Math.ceil(audioDuration / 60) : audioLengthMins) * PRICE_PER_MINUTE)).toFixed(2)})
                 </Button>
               </div>
 
@@ -1764,10 +1766,10 @@ export function ConversionFlow() {
                     <div>
                       <span className="text-gray-500">Generation cost: </span>
                       <span className="font-medium text-gray-900">
-                        ${(audioLengthMins * 0.75).toFixed(2)}
+                        ${(audioLengthMins * PRICE_PER_MINUTE).toFixed(2)}
                       </span>
                       <span className="text-gray-400 text-xs ml-1">
-                        ($0.75/min)
+                        ($0.50/min)
                       </span>
                     </div>
                   </div>
@@ -1892,7 +1894,7 @@ export function ConversionFlow() {
                       <div className="p-3 bg-gray-50 rounded-lg text-left">
                         <div className="text-xs text-gray-500 mb-0.5">Total cost</div>
                         <div className="text-xl font-semibold text-gray-900">
-                          ${(audioLengthMins * 0.75).toFixed(2)}
+                          ${(audioLengthMins * PRICE_PER_MINUTE).toFixed(2)}
                         </div>
                       </div>
                       <div className="flex flex-col items-center">

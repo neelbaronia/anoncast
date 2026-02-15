@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Pause, ExternalLink, Clock, User, Download } from "lucide-react";
 import Link from "next/link";
-import { BUY_MP3_LABEL } from "@/lib/constants";
+import { PRICE_PER_MINUTE } from "@/lib/constants";
 
 interface FloatingShape {
   id: number;
@@ -180,14 +180,20 @@ export default function GeneratedBlogsPage() {
     fetchEpisodes();
   }, []);
 
+  const getDownloadPrice = (episode: Episode) => {
+    const durationMins = Math.ceil((episode.duration || 60) / 60);
+    return Math.max(0.5, durationMins * PRICE_PER_MINUTE);
+  };
+
   const handleBuyDownload = async (episode: Episode) => {
     setPayingId(episode.id);
     try {
+      const amount = getDownloadPrice(episode);
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          amount: 5,
+          amount,
           title: episode.title,
           type: 'download',
           episodeId: episode.id
@@ -476,7 +482,7 @@ export default function GeneratedBlogsPage() {
                       ) : (
                         <Download className="w-3 h-3 mr-1" />
                       )}
-                      {BUY_MP3_LABEL}
+                      Buy MP3 (${getDownloadPrice(episode).toFixed(2)})
                     </Button>
                   </div>
                 </div>
