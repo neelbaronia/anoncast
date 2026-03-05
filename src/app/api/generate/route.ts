@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSpeech } from '@/lib/elevenlabs';
+import { generateSpeechInworld } from '@/lib/inworld';
 import { uploadToR2Edge } from '@/lib/storage-edge';
 import { supabase } from '@/lib/supabase';
+
+function synthesize(text: string, voiceId: string, provider?: string): Promise<ArrayBuffer> {
+  if (provider === 'elevenlabs') {
+    return generateSpeech(text, voiceId);
+  }
+  // Default to Inworld
+  return generateSpeechInworld(text, voiceId);
+}
 
 export const runtime = 'edge';
 
@@ -50,15 +59,16 @@ export async function POST(request: NextRequest) {
 
           // 1. Prepare outro and pause
           let outroTasks: Promise<ArrayBuffer>[] = [];
+          const lastSegment = validSegments[validSegments.length - 1];
+          const firstSegment = validSegments[0];
           if (validSegments.length > 0) {
-            const outroVoiceId = validSegments[validSegments.length - 1].voiceId;
             const outroText = "This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening! ...";
             outroTasks = [
-              generateSpeech(" . . . . . ", outroVoiceId),
-              generateSpeech(outroText, outroVoiceId)
+              synthesize(" . . . . . ", lastSegment.voiceId, lastSegment.provider),
+              synthesize(outroText, lastSegment.voiceId, lastSegment.provider)
             ];
           }
-          const pauseTask = generateSpeech(" . . . . . ", validSegments[0].voiceId);
+          const pauseTask = synthesize(" . . . . . ", firstSegment.voiceId, firstSegment.provider);
 
           const [pauseBuffer, outroBuffers] = await Promise.all([
             pauseTask.catch(() => new ArrayBuffer(0)),
@@ -72,9 +82,9 @@ export async function POST(request: NextRequest) {
           for (let i = 0; i < validSegments.length; i += BATCH_SIZE) {
             const batch = validSegments.slice(i, i + BATCH_SIZE);
             const batchResults = await Promise.all(
-              batch.map((segment: { text: string; voiceId: string }) => {
+              batch.map((segment: { text: string; voiceId: string; provider?: string }) => {
                 const sanitizedText = `${segment.text.trim()} ...`;
-                return generateSpeech(sanitizedText, segment.voiceId);
+                return synthesize(sanitizedText, segment.voiceId, segment.provider);
               })
             );
             bodyBuffers.push(...batchResults);

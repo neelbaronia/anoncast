@@ -38,6 +38,7 @@ interface VoiceOption {
   previewUrl: string;
   color: string;
   bgColor: string;
+  provider: 'inworld' | 'elevenlabs';
 }
 
 // Color palette for voices
@@ -60,6 +61,7 @@ interface TextSegment {
   id: number;
   text: string;
   voiceId: string;
+  provider?: string;
   confirmed: boolean;
 }
 
@@ -312,8 +314,9 @@ export function ConversionFlow() {
         
         if (data.success && data.voices) {
           // Assign colors to voices
-          const voicesWithColors: VoiceOption[] = data.voices.map((v: { id: string; name: string; description: string; previewUrl: string }, i: number) => ({
+          const voicesWithColors: VoiceOption[] = data.voices.map((v: { id: string; name: string; description: string; previewUrl: string; provider?: string }, i: number) => ({
             ...v,
+            provider: v.provider || 'inworld',
             color: voiceColors[i % voiceColors.length].color,
             bgColor: voiceColors[i % voiceColors.length].bgColor,
           }));
@@ -331,12 +334,11 @@ export function ConversionFlow() {
   // Load custom voice by ID
   const loadCustomVoice = async () => {
     if (!customVoiceId.trim()) return;
-    
-    // Extract voice ID from URL if pasted
+
     let voiceId = customVoiceId.trim();
-    // Handle URLs like: 
-    // - https://elevenlabs.io/app/voice-library?voiceId=xxx
-    // - https://elevenlabs.io/voice/xxx
+
+    // Detect provider: ElevenLabs IDs are 20+ char alphanumeric, or URLs containing elevenlabs
+    const isElevenLabsUrl = voiceId.includes('elevenlabs.io');
     const queryMatch = voiceId.match(/[?&]voiceId=([a-zA-Z0-9]+)/);
     const pathMatch = voiceId.match(/voice(?:s)?\/([a-zA-Z0-9]+)/);
     if (queryMatch) {
@@ -344,61 +346,80 @@ export function ConversionFlow() {
     } else if (pathMatch) {
       voiceId = pathMatch[1];
     }
-    
+
+    // ElevenLabs IDs are 20+ char alphanumeric strings; Inworld uses plain names
+    const isElevenLabs = isElevenLabsUrl || /^[a-zA-Z0-9]{15,}$/.test(voiceId);
+
     // Check if already added
     if (voiceOptions.some(v => v.id === voiceId)) {
       setActiveVoice(voiceId);
       setCustomVoiceId("");
       return;
     }
-    
+
     setCustomVoiceLoading(true);
     setCustomVoiceError(null);
-    
+
     try {
-      const response = await fetch(`/api/voices/${voiceId}`);
-      const data = await response.json();
-      
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Voice not found');
-      }
-      
-      // If voice is from shared library and not in user's account, try to add it
-      if (data.inLibrary === false && data.voice.publicOwnerId) {
-        const addResponse = await fetch(`/api/voices/${voiceId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            publicOwnerId: data.voice.publicOwnerId,
-            name: data.voice.name,
-          }),
-        });
-        
-        const addData = await addResponse.json();
-        if (!addResponse.ok || !addData.success) {
-          // If permission error, still allow using the voice for preview
-          // (generation might fail later, but at least they can see it)
-          if (addData.error?.includes('voices_write')) {
-            console.warn('Could not auto-add voice, but can still use for preview');
-          } else {
-            throw new Error(addData.error || 'Failed to add voice to library');
+      if (isElevenLabs) {
+        // ElevenLabs: look up via API
+        const response = await fetch(`/api/voices/${voiceId}`);
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Voice not found');
+        }
+
+        if (data.inLibrary === false && data.voice.publicOwnerId) {
+          const addResponse = await fetch(`/api/voices/${voiceId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              publicOwnerId: data.voice.publicOwnerId,
+              name: data.voice.name,
+            }),
+          });
+
+          const addData = await addResponse.json();
+          if (!addResponse.ok || !addData.success) {
+            if (addData.error?.includes('voices_write')) {
+              console.warn('Could not auto-add voice, but can still use for preview');
+            } else {
+              throw new Error(addData.error || 'Failed to add voice to library');
+            }
           }
         }
+
+        const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
+        const newVoice: VoiceOption = {
+          id: data.voice.id,
+          name: data.voice.name,
+          description: data.voice.description || 'Custom voice',
+          previewUrl: data.voice.previewUrl || '',
+          color: customColor.color,
+          bgColor: customColor.bgColor,
+          provider: 'elevenlabs',
+        };
+
+        setVoiceOptions(prev => [...prev, newVoice]);
+        setActiveVoice(newVoice.id);
+      } else {
+        // Inworld: just add the voice name directly (no lookup API needed)
+        const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
+        const newVoice: VoiceOption = {
+          id: voiceId,
+          name: voiceId,
+          description: 'Custom Inworld voice',
+          previewUrl: '',
+          color: customColor.color,
+          bgColor: customColor.bgColor,
+          provider: 'inworld',
+        };
+
+        setVoiceOptions(prev => [...prev, newVoice]);
+        setActiveVoice(newVoice.id);
       }
-      
-      // Add the custom voice with a unique color
-      const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
-      const newVoice: VoiceOption = {
-        id: data.voice.id,
-        name: data.voice.name,
-        description: data.voice.description || 'Custom voice',
-        previewUrl: data.voice.previewUrl || '',
-        color: customColor.color,
-        bgColor: customColor.bgColor,
-      };
-      
-      setVoiceOptions(prev => [...prev, newVoice]);
-      setActiveVoice(newVoice.id);
+
       setCustomVoiceId("");
       setCustomVoiceError(null);
     } catch (error) {
@@ -1469,6 +1490,9 @@ export function ConversionFlow() {
                               />
                               <div className="flex-1">
                                 <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
+                                {voice.provider === 'elevenlabs' && (
+                                  <span className="ml-1.5 text-[9px] font-medium text-amber-600 bg-amber-50 px-1 py-0.5 rounded">Premium</span>
+                                )}
                                 <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">{getFirstSentence(voice.description)}</span>
                               </div>
                             </div>
@@ -1503,7 +1527,7 @@ export function ConversionFlow() {
                                     );
                                   } else {
                                     setTextSegments(segments =>
-                                      segments.map(s => ({ ...s, voiceId: voice.id, confirmed: true }))
+                                      segments.map(s => ({ ...s, voiceId: voice.id, provider: voice.provider, confirmed: true }))
                                     );
                                     setActiveVoice(voice.id);
                                   }
@@ -1547,7 +1571,7 @@ export function ConversionFlow() {
                         <div className="flex gap-2">
                           <Input
                             type="text"
-                            placeholder="Paste voice ID from VoiceLab"
+                            placeholder="Inworld voice name or ElevenLabs ID"
                             value={customVoiceId}
                             onChange={(e) => {
                               setCustomVoiceId(e.target.value);
@@ -1598,7 +1622,7 @@ export function ConversionFlow() {
                                   // Assign new voice and confirm (override existing)
                                   setTextSegments(segments =>
                                     segments.map(s =>
-                                      s.id === segment.id ? { ...s, voiceId: activeVoice, confirmed: true } : s
+                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'inworld', confirmed: true } : s
                                     )
                                   );
                                 } else if (hasVoice && segment.confirmed) {
@@ -1619,7 +1643,7 @@ export function ConversionFlow() {
                                   // Assign active voice and confirm
                                   setTextSegments(segments =>
                                     segments.map(s =>
-                                      s.id === segment.id ? { ...s, voiceId: activeVoice, confirmed: true } : s
+                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'inworld', confirmed: true } : s
                                     )
                                   );
                                 }
@@ -1650,7 +1674,7 @@ export function ConversionFlow() {
                                 if (activeVoice && activeVoice !== segment.voiceId) {
                                   setTextSegments(segments =>
                                     segments.map(s =>
-                                      s.id === segment.id ? { ...s, voiceId: activeVoice, confirmed: true } : s
+                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'inworld', confirmed: true } : s
                                     )
                                   );
                                 }
@@ -1696,6 +1720,7 @@ export function ConversionFlow() {
                                         id: mergedId,
                                         text: mergedText,
                                         voiceId: prevSegment.voiceId,
+                                        provider: prevSegment.provider,
                                         confirmed: prevSegment.confirmed
                                       };
                                       // Remove current segment
@@ -1744,14 +1769,16 @@ export function ConversionFlow() {
                                             id: firstSegmentId,
                                             text: beforeText,
                                             voiceId: segment.voiceId,
+                                            provider: segment.provider,
                                             confirmed: segment.confirmed
                                           };
-                                          
+
                                           // Insert new segment after with AFTER text
                                           newSegments.splice(index + 1, 0, {
                                             id: secondSegmentId,
                                             text: afterText,
                                             voiceId: segment.voiceId,
+                                            provider: segment.provider,
                                             confirmed: segment.confirmed
                                           });
                                           
