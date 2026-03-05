@@ -410,7 +410,7 @@ export function ConversionFlow() {
           id: voiceId,
           name: voiceId,
           description: 'Custom Inworld voice',
-          previewUrl: '',
+          previewUrl: `/api/voices/preview?voice=${encodeURIComponent(voiceId)}&provider=inworld`,
           color: customColor.color,
           bgColor: customColor.bgColor,
           provider: 'inworld',
