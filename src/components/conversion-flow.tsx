@@ -1555,18 +1555,29 @@ export function ConversionFlow() {
 
                       {/* Custom Voice ID Section */}
                       <div className="pt-3 border-t border-gray-200 mt-3">
-                        <p className="text-xs font-medium text-gray-700 mb-2">
-                          <a 
-                            href="https://elevenlabs.io/app/voice-library" 
-                            target="_blank" 
+                        <p className="text-xs font-medium text-gray-700 mb-1">
+                          Browse more voices:
+                          {' '}
+                          <a
+                            href="https://inworld.ai/tts"
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
                           >
-                            Use another ElevenLabs voice
+                            Inworld
+                          </a>
+                          {' · '}
+                          <a
+                            href="https://elevenlabs.io/app/voice-library"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            ElevenLabs
                           </a>
                         </p>
                         <p className="text-[10px] text-gray-400 mb-1">
-                          Add voice to VoiceLab first, then paste ID
+                          Paste an Inworld voice name or ElevenLabs voice ID
                         </p>
                         <div className="flex gap-2">
                           <Input

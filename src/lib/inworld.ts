@@ -108,10 +108,14 @@ function splitTextIntoChunks(text: string, maxLen: number): string[] {
   return chunks;
 }
 
-// Default Inworld voices
+// Default Inworld voices (verified working)
 export const INWORLD_VOICES = [
   { id: 'Clive', name: 'Clive', description: 'Male narrative voice' },
   { id: 'Luna', name: 'Luna', description: 'Female conversational voice' },
-  { id: 'Max', name: 'Max', description: 'Male confident voice' },
-  { id: 'Lily', name: 'Lily', description: 'Female warm voice' },
+  { id: 'Ashley', name: 'Ashley', description: 'Female clear voice' },
+  { id: 'Dennis', name: 'Dennis', description: 'Male warm voice' },
+  { id: 'Ethan', name: 'Ethan', description: 'Male natural voice' },
+  { id: 'Oliver', name: 'Oliver', description: 'Male calm voice' },
+  { id: 'James', name: 'James', description: 'Male deep voice' },
+  { id: 'Hades', name: 'Hades', description: 'Male dramatic voice' },
 ];
