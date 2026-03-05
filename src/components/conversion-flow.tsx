@@ -125,6 +125,9 @@ export function ConversionFlow() {
   const [textSegments, setTextSegments] = useState<TextSegment[]>([]);
   const [activeVoice, setActiveVoice] = useState<string>("");
   const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState('');
   const isSplittingRef = useRef(false); // Track when we're splitting to prevent onBlur interference
   const [scrapeError, setScrapeError] = useState<string | null>(null);
   const [scrapeProgress, setScrapeProgress] = useState<string>('');
@@ -486,7 +489,7 @@ export function ConversionFlow() {
   };
 
   const handlePayment = async () => {
-    if (DEMO_MODE) {
+    if (DEMO_MODE || promoApplied) {
       setPaymentProcessing(true);
       setTimeout(() => {
         setPaymentProcessing(false);
@@ -1965,7 +1968,7 @@ export function ConversionFlow() {
                           ) : (
                             <CreditCard className="w-4 h-4 mr-2" />
                           )}
-                          {paymentProcessing ? "Processing..." : "Pay & Generate"}
+                          {paymentProcessing ? "Processing..." : promoApplied ? "Generate (Free)" : "Pay & Generate"}
                         </Button>
                         {(isTestMode || (typeof window !== 'undefined' && localStorage.getItem('is_test_mode') === 'true')) && (
                           <div className="mt-1.5 text-[9px] font-bold text-amber-600 tracking-wider uppercase">
@@ -1990,6 +1993,47 @@ export function ConversionFlow() {
                     <p className="text-[10px] text-amber-600 font-medium">
                       Note: Please stay on this page during generation.
                     </p>
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => { setPromoCode(e.target.value); setPromoError(''); }}
+                        placeholder="Promo code"
+                        className="h-8 w-36 px-3 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300"
+                        disabled={promoApplied}
+                      />
+                      {promoApplied ? (
+                        <span className="text-xs text-green-600 font-medium">Applied!</span>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            if (!promoCode.trim()) return;
+                            try {
+                              const res = await fetch('/api/promo', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ code: promoCode }),
+                              });
+                              const { valid } = await res.json();
+                              if (valid) {
+                                setPromoApplied(true);
+                                setPromoError('');
+                              } else {
+                                setPromoError('Invalid code');
+                              }
+                            } catch {
+                              setPromoError('Failed to verify');
+                            }
+                          }}
+                          className="h-8 px-3 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                        >
+                          Apply
+                        </button>
+                      )}
+                    </div>
+                    {promoError && (
+                      <p className="text-xs text-red-500 mt-1">{promoError}</p>
+                    )}
                     <button
                       onClick={() => setCurrentStep("review")}
                       className="mt-4 text-xs text-gray-500 hover:text-gray-900 transition-colors"
