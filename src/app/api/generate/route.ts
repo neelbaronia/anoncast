@@ -187,12 +187,10 @@ export async function POST(request: NextRequest) {
               controller.enqueue(new TextEncoder().encode(warningLine));
             }
 
-            const base64 = Buffer.from(finalBuffer).toString('base64');
             const completeLine = JSON.stringify({
               type: 'complete',
               showId: GLOBAL_SHOW_ID,
               audioUrl,
-              base64,
             }) + '\n';
             controller.enqueue(new TextEncoder().encode(completeLine));
             controller.close();

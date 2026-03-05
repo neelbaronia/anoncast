@@ -828,9 +828,7 @@ export function ConversionFlow() {
                 console.warn('Generation warning:', msg.message);
                 alert(`Warning: ${msg.message}`);
               } else if (msg.type === 'complete') {
-                const binary = Uint8Array.from(atob(msg.base64), c => c.charCodeAt(0));
-                const blob = new Blob([binary], { type: 'audio/mpeg' });
-                audioUrlToSet = URL.createObjectURL(blob);
+                audioUrlToSet = msg.audioUrl || '';
                 newShowId = msg.showId;
               } else if (msg.type === 'error') {
                 throw new Error(msg.error);
@@ -843,18 +841,20 @@ export function ConversionFlow() {
         }
       }
 
-      if (audioUrlToSet) {
-        setGeneratedAudioUrl(audioUrlToSet);
+      if (!audioUrlToSet) {
+        throw new Error('Generation completed but no audio was produced. Please try again.');
       }
-      
+
+      setGeneratedAudioUrl(audioUrlToSet);
+
       if (newShowId) {
         setShowId(newShowId);
         localStorage.setItem('last_show_id', newShowId);
       }
-      
+
       setGenerationProgress(100);
       setGenerationProgressDetail(null);
-      
+
       setTimeout(() => {
         setIsGenerating(false);
         setCurrentStep("publish");
