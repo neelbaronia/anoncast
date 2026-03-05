@@ -8,7 +8,7 @@ export function getR2Client() {
     throw new Error('Missing R2 credentials');
   }
 
-  return new AwsClient({ accessKeyId, secretAccessKey });
+  return new AwsClient({ accessKeyId, secretAccessKey, service: 's3' });
 }
 
 export async function uploadToR2Edge(
@@ -26,9 +26,14 @@ export async function uploadToR2Edge(
   const client = getR2Client();
   const url = `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${key}`;
 
+  // Ensure we have a clean ArrayBuffer (not a view on a larger one)
+  const body = data.buffer.byteLength === data.byteLength
+    ? data.buffer
+    : data.slice().buffer;
+
   const resp = await client.fetch(url, {
     method: 'PUT',
-    body: data.buffer as ArrayBuffer,
+    body: body as ArrayBuffer,
     headers: { 'Content-Type': contentType },
   });
 
