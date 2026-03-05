@@ -170,29 +170,66 @@ export function ConversionFlow() {
     // 1. Check for payment success
     if (searchParams.get('payment_success') === 'true') {
       const type = searchParams.get('type') || 'generation';
-      
+      const sessionId = searchParams.get('session_id');
+
       if (type === 'generation') {
         window.history.replaceState({}, '', window.location.pathname);
-        const savedSegments = localStorage.getItem('pending_segments');
-        const savedStep = localStorage.getItem('pending_step');
-        const savedPreview = localStorage.getItem('pending_preview');
-        
-        if (savedSegments && savedStep === 'generate') {
-          const segments = JSON.parse(savedSegments);
-          setTextSegments(segments);
-          const savedIndex = localStorage.getItem('selected_image_index');
-          if (savedIndex !== null) {
-            setSelectedImageIndex(parseInt(savedIndex));
+
+        // Try server-side state first, fall back to localStorage
+        const restoreAndGenerate = async () => {
+          let segments = null;
+          let imageIndex = 0;
+          let preview = null;
+
+          // Attempt server-side restore using Stripe session ID
+          if (sessionId) {
+            try {
+              const res = await fetch(`/api/pending-generation?session_id=${sessionId}`);
+              if (res.ok) {
+                const data = await res.json();
+                segments = data.segments;
+                imageIndex = data.selectedImageIndex ?? 0;
+                if (data.metadata) {
+                  preview = data.metadata;
+                }
+              }
+            } catch (e) {
+              console.error('Failed to fetch pending generation from server:', e);
+            }
           }
-          if (savedPreview) {
-            setPreviewData(JSON.parse(savedPreview));
+
+          // Fall back to localStorage
+          if (!segments) {
+            const savedSegments = localStorage.getItem('pending_segments');
+            const savedStep = localStorage.getItem('pending_step');
+            if (savedSegments && savedStep === 'generate') {
+              segments = JSON.parse(savedSegments);
+              const savedIndex = localStorage.getItem('selected_image_index');
+              if (savedIndex !== null) {
+                imageIndex = parseInt(savedIndex);
+              }
+              const savedPreview = localStorage.getItem('pending_preview');
+              if (savedPreview) {
+                preview = JSON.parse(savedPreview);
+              }
+            }
           }
-          setCurrentStep('generate');
-          setTimeout(() => {
-            handleGenerate(segments);
-          }, 500);
-          return;
-        }
+
+          if (segments) {
+            setTextSegments(segments);
+            setSelectedImageIndex(imageIndex);
+            if (preview) {
+              setPreviewData(preview);
+            }
+            setCurrentStep('generate');
+            setTimeout(() => {
+              handleGenerate(segments);
+            }, 500);
+          }
+        };
+
+        restoreAndGenerate();
+        return;
       } else if (type === 'download') {
         // Trigger download for the current session audio
         const audioUrl = localStorage.getItem('pending_download_url');
@@ -460,20 +497,36 @@ export function ConversionFlow() {
     }
     setPaymentProcessing(true);
     try {
-      // Save state to localStorage so we can resume after redirect
+      // Save state to localStorage as fallback
       localStorage.setItem('pending_segments', JSON.stringify(textSegments));
       localStorage.setItem('pending_step', 'generate');
       localStorage.setItem('selected_image_index', selectedImageIndex.toString());
       if (previewData) {
         localStorage.setItem('pending_preview', JSON.stringify(previewData));
       }
-      
+
+      // Build metadata for server-side storage
+      const generationMetadata = {
+        title: previewData?.title || localStorage.getItem('last_title'),
+        author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
+        image: selectedImageIndex >= 0
+          ? (previewData?.images?.[selectedImageIndex] || previewData?.featuredImage || localStorage.getItem('last_image'))
+          : 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg',
+        url: previewData?.url || localStorage.getItem('last_url'),
+        firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || '',
+        images: previewData?.images || [],
+        featuredImage: previewData?.featuredImage || null,
+      };
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           amount: audioLengthMins * PRICE_PER_MINUTE,
-          title: previewData?.title
+          title: previewData?.title,
+          segments: textSegments,
+          metadata: generationMetadata,
+          selectedImageIndex,
         }),
       });
       
@@ -768,6 +821,9 @@ export function ConversionFlow() {
               if (msg.type === 'progress') {
                 setGenerationProgress(msg.percent);
                 setGenerationProgressDetail({ done: msg.done, total: msg.total });
+              } else if (msg.type === 'warning') {
+                console.warn('Generation warning:', msg.message);
+                alert(`Warning: ${msg.message}`);
               } else if (msg.type === 'complete') {
                 const binary = Uint8Array.from(atob(msg.base64), c => c.charCodeAt(0));
                 const blob = new Blob([binary], { type: 'audio/mpeg' });

@@ -137,9 +137,16 @@ export async function POST(request: NextRequest) {
             let r2ImageUrl = metadata?.image || null;
             const GLOBAL_SHOW_ID = '00000000-0000-0000-0000-000000000000';
 
+            let persistWarning = '';
             try {
               const fileName = `${uuidv4()}.mp3`;
               audioUrl = await uploadToR2(finalBuffer, fileName);
+            } catch (r2Error) {
+              console.error('R2 upload failed:', r2Error);
+              persistWarning = 'Audio upload to storage failed. Your audio is available for this session only.';
+            }
+
+            if (audioUrl) {
               if (metadata?.image) {
                 try {
                   const imageResponse = await fetch(metadata.image);
@@ -152,19 +159,32 @@ export async function POST(request: NextRequest) {
                   }
                 } catch {}
               }
-              await supabase.from('episodes').insert({
-                show_id: GLOBAL_SHOW_ID,
-                title: metadata?.title || 'Untitled Episode',
-                description: `Original blog: ${metadata?.url || 'Unknown source'}\n\n${metadata?.firstSentence || ''}\n\nConvert your blog to audio at https://www.anoncast.net/ , or browse generated episodes at https://www.anoncast.net/generated`,
-                audio_url: audioUrl,
-                image_url: r2ImageUrl,
-                duration: Math.round(finalBuffer.length / 16000),
-                file_size: finalBuffer.length,
-                source_url: metadata?.url || null,
-                voice_id: validSegments[0]?.voiceId || null
-              });
-            } catch (persistError) {
-              console.error('Failed to persist:', persistError);
+
+              try {
+                const { error: dbError } = await supabase.from('episodes').insert({
+                  show_id: GLOBAL_SHOW_ID,
+                  title: metadata?.title || 'Untitled Episode',
+                  description: `Original blog: ${metadata?.url || 'Unknown source'}\n\n${metadata?.firstSentence || ''}\n\nConvert your blog to audio at https://www.anoncast.net/ , or browse generated episodes at https://www.anoncast.net/generated`,
+                  audio_url: audioUrl,
+                  image_url: r2ImageUrl,
+                  duration: Math.round(finalBuffer.length / 16000),
+                  file_size: finalBuffer.length,
+                  source_url: metadata?.url || null,
+                  voice_id: validSegments[0]?.voiceId || null
+                });
+                if (dbError) {
+                  console.error('Supabase insert failed:', dbError);
+                  persistWarning = `Episode saved to storage but database record failed: ${dbError.message}`;
+                }
+              } catch (dbError) {
+                console.error('Supabase insert exception:', dbError);
+                persistWarning = 'Episode saved to storage but database record failed.';
+              }
+            }
+
+            if (persistWarning) {
+              const warningLine = JSON.stringify({ type: 'warning', message: persistWarning }) + '\n';
+              controller.enqueue(new TextEncoder().encode(warningLine));
             }
 
             const base64 = Buffer.from(finalBuffer).toString('base64');

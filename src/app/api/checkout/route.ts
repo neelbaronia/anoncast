@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { supabase } from '@/lib/supabase';
 
 // Use sandbox keys if available in development, otherwise prefer production keys
-const stripeSecretKey = process.env.NODE_ENV === 'development' 
+const stripeSecretKey = process.env.NODE_ENV === 'development'
   ? (process.env.SANDBOX_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY)
   : (process.env.STRIPE_SECRET_KEY || process.env.SANDBOX_STRIPE_SECRET_KEY);
 const stripe = new Stripe(stripeSecretKey!);
@@ -11,7 +12,7 @@ const isTestMode = stripeSecretKey?.startsWith('sk_test_');
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, title, type, episodeId } = await request.json();
+    const { amount, title, type, episodeId, segments, metadata, selectedImageIndex } = await request.json();
 
     if (!amount || isNaN(amount)) {
       return NextResponse.json(
@@ -49,6 +50,23 @@ export async function POST(request: NextRequest) {
         episodeId: episodeId || '',
       }
     });
+
+    // Store pending generation state server-side for reliable resume after redirect
+    if (type !== 'download' && segments && session.id) {
+      try {
+        const { error } = await supabase.from('pending_generations').insert({
+          stripe_session_id: session.id,
+          segments,
+          metadata: metadata || null,
+          selected_image_index: selectedImageIndex ?? 0,
+        });
+        if (error) {
+          console.error('Failed to store pending generation:', error);
+        }
+      } catch (e) {
+        console.error('Failed to store pending generation:', e);
+      }
+    }
 
     return NextResponse.json({ id: session.id, url: session.url, isTestMode });
   } catch (error) {
