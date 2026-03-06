@@ -16,6 +16,26 @@ export const runtime = 'edge';
 
 const BATCH_SIZE = 5;
 
+// ~1.5 seconds of silent MP3 (128kbps, 44100Hz mono) — avoids wasting TTS credits on pauses
+function generateSilence(durationMs: number = 1500): Uint8Array {
+  // A minimal valid MP3 frame (MPEG1 Layer3, 128kbps, 44100Hz, mono)
+  // Frame header: 0xFFFB9004, followed by zero-padding for silence
+  const frameSize = 417; // bytes per frame at 128kbps/44100Hz
+  const frameDurationMs = 26.12; // ms per frame
+  const numFrames = Math.ceil(durationMs / frameDurationMs);
+  const buf = new Uint8Array(numFrames * frameSize);
+  for (let i = 0; i < numFrames; i++) {
+    const off = i * frameSize;
+    // MP3 frame header for MPEG1, Layer 3, 128kbps, 44100Hz, mono
+    buf[off] = 0xFF;
+    buf[off + 1] = 0xFB;
+    buf[off + 2] = 0x90;
+    buf[off + 3] = 0x04;
+    // Rest of frame stays zero (silence)
+  }
+  return buf;
+}
+
 function emitProgress(controller: ReadableStreamDefaultController, done: number, total: number, phase: 'segments' | 'combining' | 'uploading') {
   let percent: number;
   if (phase === 'segments') {
@@ -49,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const totalUnits = 3 + validSegments.length;
+    const totalUnits = 1 + validSegments.length;
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -57,24 +77,14 @@ export async function POST(request: NextRequest) {
           let completedUnits = 0;
           emitProgress(controller, 0, totalUnits, 'segments');
 
-          // 1. Prepare outro and pause
-          let outroTasks: Promise<ArrayBuffer>[] = [];
+          // 1. Generate silence pause and prepare outro
+          const pauseBuffer = generateSilence(1500); // 1.5s silence between paragraphs
+          const outroPause = generateSilence(2000);  // 2s silence before outro
           const lastSegment = validSegments[validSegments.length - 1];
-          const firstSegment = validSegments[0];
-          if (validSegments.length > 0) {
-            const outroText = "This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening! ...";
-            outroTasks = [
-              synthesize(" . . . . . ", lastSegment.voiceId, lastSegment.provider),
-              synthesize(outroText, lastSegment.voiceId, lastSegment.provider)
-            ];
-          }
-          const pauseTask = synthesize(" . . . . . ", firstSegment.voiceId, firstSegment.provider);
-
-          const [pauseBuffer, outroBuffers] = await Promise.all([
-            pauseTask.catch(() => new ArrayBuffer(0)),
-            Promise.all(outroTasks.map(p => p.catch(() => new ArrayBuffer(0))))
-          ]);
-          completedUnits += 3;
+          const outroText = "This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening!";
+          const outroTask = synthesize(outroText, lastSegment.voiceId, lastSegment.provider)
+            .catch(() => new ArrayBuffer(0));
+          completedUnits += 1;
           emitProgress(controller, completedUnits, totalUnits, 'segments');
 
           // 2. Process body segments in batches
@@ -94,14 +104,15 @@ export async function POST(request: NextRequest) {
 
           // 3. Interleave pauses and combine
           emitProgress(controller, totalUnits, totalUnits, 'combining');
+          const outroBuffer = await outroTask;
           const bodyWithPauses: ArrayBuffer[] = [];
           bodyBuffers.forEach((buf, i) => {
             bodyWithPauses.push(buf);
-            if (i < bodyBuffers.length - 1 && pauseBuffer.byteLength > 0) {
+            if (i < bodyBuffers.length - 1) {
               bodyWithPauses.push(pauseBuffer);
             }
           });
-          const audioBuffers = [...bodyWithPauses, ...outroBuffers].filter(b => b.byteLength > 0);
+          const audioBuffers = [...bodyWithPauses, outroPause, outroBuffer].filter(b => b.byteLength > 0);
           const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
           const combinedBuffer = new Uint8Array(totalLength);
           let offset = 0;
