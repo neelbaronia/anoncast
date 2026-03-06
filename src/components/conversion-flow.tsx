@@ -290,14 +290,15 @@ export function ConversionFlow() {
         publishDate: null
       });
 
-      // Also restore text segments if we have paragraphs
+      // Also restore text segments if we have paragraphs (with title prepended)
       if (paragraphs.length > 0) {
+        const allParagraphs = [lastTitle, ...paragraphs];
         setTextSegments(
-          paragraphs.map((text: string, i: number) => ({ 
-            id: i, 
-            text: text.trim(), 
-            voiceId: "", 
-            confirmed: false 
+          allParagraphs.map((text: string, i: number) => ({
+            id: i,
+            text: text.trim(),
+            voiceId: "",
+            confirmed: false
           }))
         );
       }
@@ -713,20 +714,22 @@ export function ConversionFlow() {
       localStorage.setItem('last_reading_time', scraped.estimatedReadTime);
       localStorage.setItem('last_paragraphs', JSON.stringify(scraped.paragraphs));
       localStorage.setItem('last_first_sentence', scraped.paragraphs?.[0] ? getFirstSentence(scraped.paragraphs[0]) : '');
-      localStorage.setItem('pending_segments', JSON.stringify(scraped.paragraphs.map((text, i) => ({ 
-        id: i, 
-        text: text.trim(), 
-        voiceId: "", 
-        confirmed: false 
+      // Prepend title as first spoken segment
+      const allParagraphs = [scraped.title, ...scraped.paragraphs];
+      localStorage.setItem('pending_segments', JSON.stringify(allParagraphs.map((text, i) => ({
+        id: i,
+        text: text.trim(),
+        voiceId: "",
+        confirmed: false
       }))));
-      
-      // Initialize text segments from scraped paragraphs
+
+      // Initialize text segments from title + scraped paragraphs
       setTextSegments(
-        scraped.paragraphs.map((text, i) => ({ 
-          id: i, 
-          text: text.trim(), 
-          voiceId: "", 
-          confirmed: false 
+        allParagraphs.map((text, i) => ({
+          id: i,
+          text: text.trim(),
+          voiceId: "",
+          confirmed: false
         }))
       );
     } catch (error) {
