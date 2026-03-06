@@ -238,14 +238,8 @@ export function ConversionFlow() {
       } else if (type === 'download') {
         // Trigger download for the current session audio
         const audioUrl = localStorage.getItem('pending_download_url');
-        const title = localStorage.getItem('last_title') || 'audio';
         if (audioUrl) {
-          const a = document.createElement('a');
-          a.href = audioUrl;
-          a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          downloadWithTags(audioUrl);
           localStorage.removeItem('pending_download_url');
         }
         window.history.replaceState({}, '', window.location.pathname);
@@ -498,16 +492,25 @@ export function ConversionFlow() {
     }
   };
 
-  // Handle Export Audio
-  const handleExportAudio = () => {
-    if (!generatedAudioUrl) return;
+  // Download MP3 with ID3 metadata (title, author, cover image)
+  const downloadWithTags = (audioUrl: string) => {
     const title = previewData?.title || localStorage.getItem('last_title') || 'audio';
+    const author = previewData?.author || localStorage.getItem('last_author') || 'anoncast';
+    const image = previewData?.featuredImage || localStorage.getItem('last_image') || '';
+    const params = new URLSearchParams({ url: audioUrl, title, author });
+    if (image) params.set('image', image);
     const a = document.createElement('a');
-    a.href = generatedAudioUrl;
+    a.href = `/api/download?${params.toString()}`;
     a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+
+  // Handle Export Audio
+  const handleExportAudio = () => {
+    if (!generatedAudioUrl) return;
+    downloadWithTags(generatedAudioUrl);
   };
 
   const handlePayment = async () => {
@@ -581,13 +584,7 @@ export function ConversionFlow() {
       setIsBuyingDownload(true);
       setTimeout(() => {
         setIsBuyingDownload(false);
-        const title = previewData?.title || localStorage.getItem('last_title') || 'audio';
-        const a = document.createElement('a');
-        a.href = generatedAudioUrl;
-        a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        downloadWithTags(generatedAudioUrl);
       }, 1000);
       return;
     }

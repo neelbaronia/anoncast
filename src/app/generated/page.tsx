@@ -157,10 +157,16 @@ export default function GeneratedBlogsPage() {
           const episodeId = searchParams.get('episodeId');
           const episode = data.find((e: Episode) => e.id === episodeId);
           if (episode) {
-            // Trigger actual download
+            // Trigger download with ID3 tags
+            const params = new URLSearchParams({
+              url: episode.audio_url,
+              title: episode.title || 'Untitled',
+              author: 'anoncast',
+            });
+            if (episode.image_url) params.set('image', episode.image_url);
             const a = document.createElement('a');
-            a.href = episode.audio_url;
-            a.download = `podcast-${episode.id}.mp3`;
+            a.href = `/api/download?${params.toString()}`;
+            a.download = `podcast-${(episode.title || episode.id).replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
