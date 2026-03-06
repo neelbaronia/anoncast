@@ -499,12 +499,7 @@ export function ConversionFlow() {
     const image = previewData?.featuredImage || localStorage.getItem('last_image') || '';
     const params = new URLSearchParams({ url: audioUrl, title, author });
     if (image) params.set('image', image);
-    const a = document.createElement('a');
-    a.href = `/api/download?${params.toString()}`;
-    a.download = `podcast-${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp3`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    window.location.href = `/api/download?${params.toString()}`;
   };
 
   // Handle Export Audio
