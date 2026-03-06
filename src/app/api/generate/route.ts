@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
           // 3. Interleave pauses and combine
           emitProgress(controller, totalUnits, totalUnits, 'combining');
           const outroBuffer = await outroTask;
-          const bodyWithPauses: ArrayBuffer[] = [];
+          const bodyWithPauses: (ArrayBuffer | Uint8Array)[] = [];
           bodyBuffers.forEach((buf, i) => {
             bodyWithPauses.push(buf);
             if (i < bodyBuffers.length - 1) {
