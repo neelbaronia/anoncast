@@ -1,1 +1,1 @@
-export const PRICE_PER_MINUTE = 0.5; // $0.50 per minute of generated audio
+export const PRICE_PER_MINUTE = 0.3; // $0.30 per minute of generated audio

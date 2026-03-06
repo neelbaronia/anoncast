@@ -182,7 +182,7 @@ export default function GeneratedBlogsPage() {
 
   const getDownloadPrice = (episode: Episode) => {
     const durationMins = Math.ceil((episode.duration || 60) / 60);
-    return Math.max(0.5, durationMins * PRICE_PER_MINUTE);
+    return Math.max(0.3, durationMins * PRICE_PER_MINUTE);
   };
 
   const handleBuyDownload = async (episode: Episode) => {

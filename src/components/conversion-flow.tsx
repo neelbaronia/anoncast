@@ -596,7 +596,7 @@ export function ConversionFlow() {
     try {
       localStorage.setItem('pending_download_url', generatedAudioUrl);
       const downloadMins = audioDuration > 0 ? Math.ceil(audioDuration / 60) : audioLengthMins;
-      const amount = Math.max(0.5, downloadMins * PRICE_PER_MINUTE);
+      const amount = Math.max(0.3, downloadMins * PRICE_PER_MINUTE);
 
       const response = await fetch('/api/checkout', {
         method: 'POST',
@@ -1096,7 +1096,7 @@ export function ConversionFlow() {
                   ) : (
                     <Download className="w-4 h-4 mr-2 text-gray-500" />
                   )}
-                  Buy MP3 (${(Math.max(0.5, (audioDuration > 0 ? Math.ceil(audioDuration / 60) : audioLengthMins) * PRICE_PER_MINUTE)).toFixed(2)})
+                  Buy MP3 (${(Math.max(0.3, (audioDuration > 0 ? Math.ceil(audioDuration / 60) : audioLengthMins) * PRICE_PER_MINUTE)).toFixed(2)})
                 </Button>
               </div>
 
@@ -1869,7 +1869,7 @@ export function ConversionFlow() {
                         ${(audioLengthMins * PRICE_PER_MINUTE).toFixed(2)}
                       </span>
                       <span className="text-gray-400 text-xs ml-1">
-                        ($0.50/min)
+                        ($0.30/min)
                       </span>
                     </div>
                   </div>
