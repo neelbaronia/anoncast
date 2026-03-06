@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
             audioUrl = await uploadToR2Edge(combinedBuffer, fileName);
           } catch (r2Error) {
             console.error('R2 upload failed:', r2Error);
-            persistWarning = 'Audio upload to storage failed.';
+            persistWarning = `Audio upload to storage failed: ${r2Error instanceof Error ? r2Error.message : String(r2Error)}`;
           }
 
           if (audioUrl) {
