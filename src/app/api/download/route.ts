@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return new Response(taggedBuffer, {
+    return new Response(new Uint8Array(taggedBuffer), {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Disposition': `attachment; filename="${encodeFileName(title)}.mp3"`,
