@@ -464,15 +464,21 @@ export function ConversionFlow() {
       const handleEnded = () => setIsPlaying(false);
       const handleTimeUpdate = () => setAudioCurrentTime(audio.currentTime);
       const handleLoadedMetadata = () => setAudioDuration(audio.duration);
-      
+      const handleError = () => {
+        console.error("Audio load error:", audio.error?.message, "src:", audio.src);
+        setIsPlaying(false);
+      };
+
       audio.addEventListener('ended', handleEnded);
       audio.addEventListener('timeupdate', handleTimeUpdate);
       audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-      
+      audio.addEventListener('error', handleError);
+
       return () => {
         audio.removeEventListener('ended', handleEnded);
         audio.removeEventListener('timeupdate', handleTimeUpdate);
         audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+        audio.removeEventListener('error', handleError);
       };
     }
   }, [isPlaying, generatedAudioUrl, currentStep]);
@@ -653,7 +659,14 @@ export function ConversionFlow() {
       // Handle existing episode (Redundancy check)
       if (result.alreadyExists) {
         const ep = result.episode;
-        setGeneratedAudioUrl(ep.audio_url);
+        // Convert direct R2 URL to proxied URL for CORS compatibility
+        const epAudioUrl = ep.audio_url || '';
+        if (epAudioUrl.includes('r2.dev/')) {
+          const filename = epAudioUrl.split('r2.dev/')[1];
+          setGeneratedAudioUrl(`/api/audio/${filename}`);
+        } else {
+          setGeneratedAudioUrl(epAudioUrl);
+        }
         setShowId(ep.show_id || "00000000-0000-0000-0000-000000000000");
         setIsRedundant(true);
         
@@ -844,7 +857,14 @@ export function ConversionFlow() {
                 console.warn('Generation warning:', msg.message);
                 alert(`Warning: ${msg.message}`);
               } else if (msg.type === 'complete') {
-                audioUrlToSet = msg.audioUrl || '';
+                // Convert direct R2 URL to proxied URL for CORS compatibility
+                const rawUrl = msg.audioUrl || '';
+                if (rawUrl.includes('r2.dev/')) {
+                  const filename = rawUrl.split('r2.dev/')[1];
+                  audioUrlToSet = `/api/audio/${filename}`;
+                } else {
+                  audioUrlToSet = rawUrl;
+                }
                 newShowId = msg.showId;
               } else if (msg.type === 'error') {
                 throw new Error(msg.error);
