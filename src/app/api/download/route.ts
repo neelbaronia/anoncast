@@ -11,9 +11,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
   }
 
+  // Convert proxied /api/audio/ URLs back to direct R2 URLs for server-side fetch
+  let fetchUrl = url;
+  if (url.startsWith('/api/audio/')) {
+    const filename = url.replace('/api/audio/', '');
+    fetchUrl = `https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/${filename}`;
+  }
+
   try {
     // Fetch the MP3 from R2
-    const audioResponse = await fetch(url);
+    const audioResponse = await fetch(fetchUrl);
     if (!audioResponse.ok) {
       return NextResponse.json({ error: 'Failed to fetch audio' }, { status: 502 });
     }

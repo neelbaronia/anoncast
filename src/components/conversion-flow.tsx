@@ -449,7 +449,7 @@ export function ConversionFlow() {
     if (currentStep === 'publish' && generatedAudioUrl) {
       if (!audioRef.current) {
         audioRef.current = new Audio(generatedAudioUrl);
-      } else if (audioRef.current.src !== generatedAudioUrl) {
+      } else if (!audioRef.current.src.endsWith(generatedAudioUrl.replace(/^\//, ''))) {
         audioRef.current.src = generatedAudioUrl;
       }
       
