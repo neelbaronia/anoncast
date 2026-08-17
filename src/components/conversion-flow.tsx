@@ -2114,6 +2114,8 @@ export function ConversionFlow() {
                       variant="outline"
                       onClick={() => {
                         setGenerationError(null);
+                        setGenerationProgress(0);
+                        setGenerationProgressDetail(null);
                         setCurrentStep("review");
                       }}
                       className="mt-4"
