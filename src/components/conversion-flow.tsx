@@ -38,7 +38,7 @@ interface VoiceOption {
   previewUrl: string;
   color: string;
   bgColor: string;
-  provider: 'inworld' | 'elevenlabs';
+  provider: 'elevenlabs';
 }
 
 // Color palette for voices
@@ -311,7 +311,7 @@ export function ConversionFlow() {
           // Assign colors to voices
           const voicesWithColors: VoiceOption[] = data.voices.map((v: { id: string; name: string; description: string; previewUrl: string; provider?: string }, i: number) => ({
             ...v,
-            provider: v.provider || 'inworld',
+            provider: 'elevenlabs',
             color: voiceColors[i % voiceColors.length].color,
             bgColor: voiceColors[i % voiceColors.length].bgColor,
           }));
@@ -332,8 +332,6 @@ export function ConversionFlow() {
 
     let voiceId = customVoiceId.trim();
 
-    // Detect provider: ElevenLabs IDs are 20+ char alphanumeric, or URLs containing elevenlabs
-    const isElevenLabsUrl = voiceId.includes('elevenlabs.io');
     const queryMatch = voiceId.match(/[?&]voiceId=([a-zA-Z0-9]+)/);
     const pathMatch = voiceId.match(/voice(?:s)?\/([a-zA-Z0-9]+)/);
     if (queryMatch) {
@@ -341,9 +339,6 @@ export function ConversionFlow() {
     } else if (pathMatch) {
       voiceId = pathMatch[1];
     }
-
-    // ElevenLabs IDs are 20+ char alphanumeric strings; Inworld uses plain names
-    const isElevenLabs = isElevenLabsUrl || /^[a-zA-Z0-9]{15,}$/.test(voiceId);
 
     // Check if already added
     if (voiceOptions.some(v => v.id === voiceId)) {
@@ -356,64 +351,46 @@ export function ConversionFlow() {
     setCustomVoiceError(null);
 
     try {
-      if (isElevenLabs) {
-        // ElevenLabs: look up via API
-        const response = await fetch(`/api/voices/${voiceId}`);
-        const data = await response.json();
+      const response = await fetch(`/api/voices/${voiceId}`);
+      const data = await response.json();
 
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Voice not found');
-        }
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Voice not found');
+      }
 
-        if (data.inLibrary === false && data.voice.publicOwnerId) {
-          const addResponse = await fetch(`/api/voices/${voiceId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              publicOwnerId: data.voice.publicOwnerId,
-              name: data.voice.name,
-            }),
-          });
+      if (data.inLibrary === false && data.voice.publicOwnerId) {
+        const addResponse = await fetch(`/api/voices/${voiceId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            publicOwnerId: data.voice.publicOwnerId,
+            name: data.voice.name,
+          }),
+        });
 
-          const addData = await addResponse.json();
-          if (!addResponse.ok || !addData.success) {
-            if (addData.error?.includes('voices_write')) {
-              console.warn('Could not auto-add voice, but can still use for preview');
-            } else {
-              throw new Error(addData.error || 'Failed to add voice to library');
-            }
+        const addData = await addResponse.json();
+        if (!addResponse.ok || !addData.success) {
+          if (addData.error?.includes('voices_write')) {
+            console.warn('Could not auto-add voice, but can still use for preview');
+          } else {
+            throw new Error(addData.error || 'Failed to add voice to library');
           }
         }
-
-        const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
-        const newVoice: VoiceOption = {
-          id: data.voice.id,
-          name: data.voice.name,
-          description: data.voice.description || 'Custom voice',
-          previewUrl: data.voice.previewUrl || '',
-          color: customColor.color,
-          bgColor: customColor.bgColor,
-          provider: 'elevenlabs',
-        };
-
-        setVoiceOptions(prev => [...prev, newVoice]);
-        setActiveVoice(newVoice.id);
-      } else {
-        // Inworld: just add the voice name directly (no lookup API needed)
-        const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
-        const newVoice: VoiceOption = {
-          id: voiceId,
-          name: voiceId,
-          description: 'Custom Inworld voice',
-          previewUrl: `/api/voices/preview?voice=${encodeURIComponent(voiceId)}&provider=inworld`,
-          color: customColor.color,
-          bgColor: customColor.bgColor,
-          provider: 'inworld',
-        };
-
-        setVoiceOptions(prev => [...prev, newVoice]);
-        setActiveVoice(newVoice.id);
       }
+
+      const customColor = voiceColors[(voiceOptions.length) % voiceColors.length];
+      const newVoice: VoiceOption = {
+        id: data.voice.id,
+        name: data.voice.name,
+        description: data.voice.description || 'Custom voice',
+        previewUrl: data.voice.previewUrl || '',
+        color: customColor.color,
+        bgColor: customColor.bgColor,
+        provider: 'elevenlabs',
+      };
+
+      setVoiceOptions(prev => [...prev, newVoice]);
+      setActiveVoice(newVoice.id);
 
       setCustomVoiceId("");
       setCustomVoiceError(null);
@@ -1571,17 +1548,7 @@ export function ConversionFlow() {
                       {/* Custom Voice ID Section */}
                       <div className="pt-3 border-t border-gray-200 mt-3">
                         <p className="text-xs font-medium text-gray-700 mb-1">
-                          Browse more voices:
-                          {' '}
-                          <a
-                            href="https://inworld.ai/tts"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                          >
-                            Inworld
-                          </a>
-                          {' · '}
+                          Browse more voices:{' '}
                           <a
                             href="https://elevenlabs.io/app/voice-library"
                             target="_blank"
@@ -1592,12 +1559,12 @@ export function ConversionFlow() {
                           </a>
                         </p>
                         <p className="text-[10px] text-gray-400 mb-1">
-                          Paste an Inworld voice name or ElevenLabs voice ID
+                          Paste an ElevenLabs voice ID
                         </p>
                         <div className="flex gap-2">
                           <Input
                             type="text"
-                            placeholder="Inworld voice name or ElevenLabs ID"
+                            placeholder="ElevenLabs voice ID"
                             value={customVoiceId}
                             onChange={(e) => {
                               setCustomVoiceId(e.target.value);
@@ -1648,7 +1615,7 @@ export function ConversionFlow() {
                                   // Assign new voice and confirm (override existing)
                                   setTextSegments(segments =>
                                     segments.map(s =>
-                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'inworld', confirmed: true } : s
+                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'elevenlabs', confirmed: true } : s
                                     )
                                   );
                                 } else if (hasVoice && segment.confirmed) {
@@ -1669,7 +1636,7 @@ export function ConversionFlow() {
                                   // Assign active voice and confirm
                                   setTextSegments(segments =>
                                     segments.map(s =>
-                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'inworld', confirmed: true } : s
+                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'elevenlabs', confirmed: true } : s
                                     )
                                   );
                                 }
@@ -1700,7 +1667,7 @@ export function ConversionFlow() {
                                 if (activeVoice && activeVoice !== segment.voiceId) {
                                   setTextSegments(segments =>
                                     segments.map(s =>
-                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'inworld', confirmed: true } : s
+                                      s.id === segment.id ? { ...s, voiceId: activeVoice, provider: voiceOptions.find(v => v.id === activeVoice)?.provider || 'elevenlabs', confirmed: true } : s
                                     )
                                   );
                                 }

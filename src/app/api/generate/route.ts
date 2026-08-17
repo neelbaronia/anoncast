@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateSpeech } from '@/lib/elevenlabs';
-import { generateSpeechInworld } from '@/lib/inworld';
+import { generateSpeech, resolveElevenLabsVoiceId } from '@/lib/elevenlabs';
 import { uploadToR2Edge } from '@/lib/storage-edge';
 import { supabase } from '@/lib/supabase';
 
 function synthesize(text: string, voiceId: string, provider?: string): Promise<ArrayBuffer> {
-  if (provider === 'elevenlabs') {
-    return generateSpeech(text, voiceId);
-  }
-  // Default to Inworld
-  return generateSpeechInworld(text, voiceId);
+  const resolvedVoiceId = provider === 'elevenlabs'
+    ? voiceId
+    : resolveElevenLabsVoiceId(voiceId);
+  return generateSpeech(text, resolvedVoiceId);
 }
 
 export const runtime = 'edge';

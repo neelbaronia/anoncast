@@ -1,30 +1,22 @@
 import { NextResponse } from 'next/server';
-import { INWORLD_VOICES } from '@/lib/inworld';
+import { fetchVoices } from '@/lib/elevenlabs';
 
 export async function GET() {
   try {
-    const inworldVoices = INWORLD_VOICES.map(v => ({
-      ...v,
-      previewUrl: `/api/voices/preview?voice=${encodeURIComponent(v.id)}&provider=inworld`,
-      category: 'inworld',
-      provider: 'inworld' as const,
+    const voices = (await fetchVoices()).map(voice => ({
+      ...voice,
+      provider: 'elevenlabs' as const,
     }));
 
     return NextResponse.json({
       success: true,
-      voices: inworldVoices,
+      voices,
     });
   } catch (error) {
-    console.error('Error fetching voices:', error);
-
-    return NextResponse.json({
-      success: true,
-      voices: INWORLD_VOICES.map(v => ({
-        ...v,
-        previewUrl: `/api/voices/preview?voice=${encodeURIComponent(v.id)}&provider=inworld`,
-        category: 'inworld',
-        provider: 'inworld',
-      })),
-    });
+    console.error('Error fetching ElevenLabs voices:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch ElevenLabs voices' },
+      { status: 502 }
+    );
   }
 }

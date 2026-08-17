@@ -2,6 +2,35 @@
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
+// Voice IDs verified in the configured ElevenLabs account. Drafts created with
+// the previous Inworld/Gemini catalogs store provider-specific voice names, so
+// translate those names before retrying them through ElevenLabs.
+const DEFAULT_ELEVENLABS_VOICE_ID = 'TX3LPaxmHKxFdv7VOQHJ';
+const LEGACY_VOICE_MAP: Record<string, string> = {
+  algenib: 'CwhRBWXzGAHq8TQ4Fs17',
+  aoede: 'cgSgspJ2msm6clMCkdW9',
+  ashley: 'XrExE9yKIg1WjnnlVkGX',
+  charon: 'CwhRBWXzGAHq8TQ4Fs17',
+  clive: 'CwhRBWXzGAHq8TQ4Fs17',
+  dennis: 'CwhRBWXzGAHq8TQ4Fs17',
+  ethan: 'TX3LPaxmHKxFdv7VOQHJ',
+  hades: 'CwhRBWXzGAHq8TQ4Fs17',
+  james: 'CwhRBWXzGAHq8TQ4Fs17',
+  kore: 'XrExE9yKIg1WjnnlVkGX',
+  luna: 'cgSgspJ2msm6clMCkdW9',
+  oliver: 'cjVigY5qzO86Huf0OWal',
+  orus: 'cjVigY5qzO86Huf0OWal',
+  puck: 'TX3LPaxmHKxFdv7VOQHJ',
+  schedar: 'CwhRBWXzGAHq8TQ4Fs17',
+  zephyr: 'cgSgspJ2msm6clMCkdW9',
+};
+
+export function resolveElevenLabsVoiceId(voiceId?: string): string {
+  const requestedVoice = voiceId?.trim();
+  if (!requestedVoice) return DEFAULT_ELEVENLABS_VOICE_ID;
+  return LEGACY_VOICE_MAP[requestedVoice.toLowerCase()] || requestedVoice;
+}
+
 export interface ElevenLabsVoice {
   voice_id: string;
   name: string;

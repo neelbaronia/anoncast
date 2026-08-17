@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateSpeechInworld } from '@/lib/inworld';
+import { generateSpeech, resolveElevenLabsVoiceId } from '@/lib/elevenlabs';
 
 export const runtime = 'edge';
 
@@ -16,11 +16,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const cacheKey = `inworld:${voice}`;
+    const resolvedVoice = resolveElevenLabsVoiceId(voice);
+    const cacheKey = `elevenlabs:${resolvedVoice}`;
     let audioBuffer = previewCache.get(cacheKey);
 
     if (!audioBuffer) {
-      audioBuffer = await generateSpeechInworld(PREVIEW_TEXT, voice);
+      audioBuffer = await generateSpeech(PREVIEW_TEXT, resolvedVoice);
       previewCache.set(cacheKey, audioBuffer);
     }
 
