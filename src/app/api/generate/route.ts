@@ -12,7 +12,9 @@ function synthesize(text: string, voiceId: string, provider?: string): Promise<A
 
 export const runtime = 'edge';
 
-const BATCH_SIZE = 5;
+// The current ElevenLabs subscription permits two concurrent requests.
+// Keep each batch at that ceiling and synthesize the outro separately.
+const BATCH_SIZE = 2;
 
 
 function emitProgress(controller: ReadableStreamDefaultController, done: number, total: number, phase: 'segments' | 'combining' | 'uploading') {
@@ -56,13 +58,10 @@ export async function POST(request: NextRequest) {
           let completedUnits = 0;
           emitProgress(controller, 0, totalUnits, 'segments');
 
-          // 1. Prepare outro
+          // 1. Prepare outro metadata. Synthesis happens after the body so it
+          // does not consume a third ElevenLabs concurrency slot.
           const lastSegment = validSegments[validSegments.length - 1];
           const outroText = "...... This was made with anoncast. If you want to convert a blog to audio, check out anoncast dot net. Thanks for listening!";
-          const outroTask = synthesize(outroText, lastSegment.voiceId, lastSegment.provider)
-            .catch(() => new ArrayBuffer(0));
-          completedUnits += 1;
-          emitProgress(controller, completedUnits, totalUnits, 'segments');
 
           // 2. Process body segments in batches
           const bodyBuffers: ArrayBuffer[] = [];
@@ -79,9 +78,14 @@ export async function POST(request: NextRequest) {
             emitProgress(controller, completedUnits, totalUnits, 'segments');
           }
 
-          // 3. Combine all segments (pauses are handled by "..." in segment text)
+          // 3. Generate the outro after the body batches, then combine all
+          // segments (pauses are handled by "..." in segment text).
+          const outroBuffer = await synthesize(outroText, lastSegment.voiceId, lastSegment.provider)
+            .catch(() => new ArrayBuffer(0));
+          completedUnits += 1;
+          emitProgress(controller, completedUnits, totalUnits, 'segments');
+
           emitProgress(controller, totalUnits, totalUnits, 'combining');
-          const outroBuffer = await outroTask;
           const audioBuffers = [...bodyBuffers, outroBuffer].filter(b => b.byteLength > 0);
           const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
           const combinedBuffer = new Uint8Array(totalLength);

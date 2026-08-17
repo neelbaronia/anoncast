@@ -165,28 +165,44 @@ export async function generateSpeech(
   }
 ): Promise<ArrayBuffer> {
   const apiKey = getApiKey();
-  
-  const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`, {
-    method: 'POST',
-    headers: {
-      'xi-api-key': apiKey,
-      'Content-Type': 'application/json',
+
+  const requestBody = JSON.stringify({
+    text,
+    model_id: options?.modelId || 'eleven_v3',
+    voice_settings: {
+      stability: options?.stability || 1.0,
+      similarity_boost: options?.similarityBoost || 0.75,
+      style: 0,
     },
-    body: JSON.stringify({
-      text,
-      model_id: options?.modelId || 'eleven_v3',
-      voice_settings: {
-        stability: options?.stability || 1.0,
-        similarity_boost: options?.similarityBoost || 0.75,
-        style: 0,
-      },
-    }),
   });
 
-  if (!response.ok) {
+  const maxAttempts = 5;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: requestBody,
+    });
+
+    if (response.ok) {
+      return response.arrayBuffer();
+    }
+
     const error = await response.text();
-    throw new Error(`Failed to generate speech: ${response.status} - ${error}`);
+    const canRetry = response.status === 429 && attempt < maxAttempts - 1;
+    if (!canRetry) {
+      throw new Error(`Failed to generate speech: ${response.status} - ${error}`);
+    }
+
+    const retryAfterSeconds = Number(response.headers.get('retry-after'));
+    const retryDelayMs = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+      ? retryAfterSeconds * 1000
+      : 1500 * 2 ** attempt;
+    await new Promise(resolve => setTimeout(resolve, retryDelayMs));
   }
 
-  return response.arrayBuffer();
+  throw new Error('Failed to generate speech after retrying.');
 }
