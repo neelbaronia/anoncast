@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -246,23 +246,28 @@ async function validateFinalMp3(filePath: string): Promise<{
   return { buffer, probe, warnings: decode.stderr.trim() };
 }
 
-async function encodeNormalizedWavFiles(tempDirectory: string, wavFiles: string[]): Promise<string> {
+async function encodeInputFiles(tempDirectory: string, inputFiles: string[]): Promise<string> {
   const { ffmpeg } = getMediaBinaryPaths();
-  const concatManifest = path.join(tempDirectory, 'chunks.ffconcat');
   const finalPath = path.join(tempDirectory, 'final.mp3');
-  const manifest = ['ffconcat version 1.0', ...wavFiles.map((file) => `file ${path.basename(file)}`)].join('\n');
-  await writeFile(concatManifest, `${manifest}\n`, 'utf8');
+  const normalizedLabels = inputFiles.map((_, index) => `[normalized-${index}]`);
+  const filter = [
+    ...inputFiles.map((_, index) => (
+      `[${index}:a:0]aresample=${MP3_OUTPUT.sampleRate},`
+      + `aformat=sample_fmts=fltp:sample_rates=${MP3_OUTPUT.sampleRate}:channel_layouts=mono,`
+      + `asetpts=PTS-STARTPTS${normalizedLabels[index]}`
+    )),
+    `${normalizedLabels.join('')}concat=n=${inputFiles.length}:v=0:a=1[final-audio]`,
+  ].join(';');
 
   await runProcess(ffmpeg, [
     '-hide_banner',
     '-nostdin',
     '-v', 'error',
     '-y',
-    '-f', 'concat',
-    '-safe', '1',
-    '-i', concatManifest,
+    ...inputFiles.flatMap((file) => ['-i', file]),
+    '-filter_complex', filter,
     '-map_metadata', '-1',
-    '-map', '0:a:0',
+    '-map', '[final-audio]',
     '-vn',
     '-sn',
     '-dn',
@@ -303,34 +308,17 @@ export async function assembleMp3Chunks(chunks: readonly AudioBytes[]): Promise<
     throw new Error('Cannot assemble an MP3 without audio chunks');
   }
 
-  const { ffmpeg } = getMediaBinaryPaths();
   const tempDirectory = await mkdtemp(path.join(tmpdir(), 'anoncast-audio-'));
 
   try {
-    const normalizedWavFiles: string[] = [];
+    const inputFiles: string[] = [];
     for (const [index, chunk] of nonEmptyChunks.entries()) {
       const inputPath = path.join(tempDirectory, `chunk-${index.toString().padStart(4, '0')}.mp3`);
-      const wavPath = path.join(tempDirectory, `chunk-${index.toString().padStart(4, '0')}.wav`);
       await writeFile(inputPath, chunk);
-      await runProcess(ffmpeg, [
-        '-hide_banner',
-        '-nostdin',
-        '-v', 'error',
-        '-y',
-        '-i', inputPath,
-        '-map', '0:a:0',
-        '-vn',
-        '-sn',
-        '-dn',
-        '-ac', String(MP3_OUTPUT.channels),
-        '-ar', String(MP3_OUTPUT.sampleRate),
-        '-c:a', 'pcm_s16le',
-        wavPath,
-      ]);
-      normalizedWavFiles.push(wavPath);
+      inputFiles.push(inputPath);
     }
 
-    const finalPath = await encodeNormalizedWavFiles(tempDirectory, normalizedWavFiles);
+    const finalPath = await encodeInputFiles(tempDirectory, inputFiles);
     return await createArtifact(finalPath);
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
@@ -338,30 +326,14 @@ export async function assembleMp3Chunks(chunks: readonly AudioBytes[]): Promise<
 }
 
 export async function repairMp3File(sourcePath: string): Promise<FinalMp3Artifact> {
-  const { ffmpeg } = getMediaBinaryPaths();
   const tempDirectory = await mkdtemp(path.join(tmpdir(), 'anoncast-repair-'));
-  const normalizedWavPath = path.join(tempDirectory, 'source.wav');
+  const normalizedSourcePath = path.join(tempDirectory, 'source.mp3');
 
   try {
     // A complete decode strips every ID3/Xing header embedded by the original
-    // byte concatenation. The WAV is then encoded once into a fresh MP3 stream.
-    await runProcess(ffmpeg, [
-      '-hide_banner',
-      '-nostdin',
-      '-v', 'warning',
-      '-y',
-      '-i', sourcePath,
-      '-map', '0:a:0',
-      '-vn',
-      '-sn',
-      '-dn',
-      '-ac', String(MP3_OUTPUT.channels),
-      '-ar', String(MP3_OUTPUT.sampleRate),
-      '-c:a', 'pcm_s16le',
-      normalizedWavPath,
-    ]);
-
-    const finalPath = await encodeNormalizedWavFiles(tempDirectory, [normalizedWavPath]);
+    // byte concatenation. FFmpeg decodes it and encodes one fresh MP3 stream.
+    await copyFile(sourcePath, normalizedSourcePath);
+    const finalPath = await encodeInputFiles(tempDirectory, [normalizedSourcePath]);
     return await createArtifact(finalPath);
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
