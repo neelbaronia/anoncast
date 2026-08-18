@@ -1482,9 +1482,6 @@ export function ConversionFlow() {
                               />
                               <div className="flex-1">
                                 <span className="font-medium text-gray-900 text-sm">{voice.name}</span>
-                                {voice.provider === 'elevenlabs' && (
-                                  <span className="ml-1.5 text-[9px] font-medium text-amber-600 bg-amber-50 px-1 py-0.5 rounded">Premium</span>
-                                )}
                                 <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">{getFirstSentence(voice.description)}</span>
                               </div>
                             </div>
