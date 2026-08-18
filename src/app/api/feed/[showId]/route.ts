@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { formatItunesDuration } from '@/lib/audio/duration';
 import { supabase } from '@/lib/supabase';
 import { create } from 'xmlbuilder2';
 
@@ -73,7 +74,7 @@ export async function GET(
         .ele('pubDate').txt(new Date(episode.published_at).toUTCString()).up()
         .ele('guid', { isPermaLink: 'false' }).txt(episode.id).up()
         .ele('itunes:author').txt('anoncast.net').up()
-        .ele('itunes:duration').txt(episode.duration?.toString() || '0').up()
+        .ele('itunes:duration').txt(formatItunesDuration(episode.duration)).up()
         .ele('itunes:explicit').txt('no').up()
         .ele('media:content', { 
           url: episodeImageUrl,

@@ -1,4 +1,6 @@
-// Inworld TTS API client (Edge Runtime compatible)
+import { assembleMp3Chunks } from './audio/mp3';
+
+// Inworld TTS API client. Audio assembly requires the Node runtime.
 
 const INWORLD_API_URL = 'https://api.inworld.ai/tts/v1/voice';
 const MODEL_ID = 'inworld-tts-1.5-max';
@@ -28,23 +30,17 @@ export async function generateSpeechInworld(
 ): Promise<ArrayBuffer> {
   const apiKey = getApiKey();
 
-  // If text exceeds limit, split at sentence boundaries and concatenate
+  // If text exceeds the API limit, each response is a complete MP3. Re-encode
+  // those files into one stream instead of appending their encoded bytes.
   if (text.length > MAX_CHARS) {
     const chunks = splitTextIntoChunks(text, MAX_CHARS);
-    const buffers = [];
+    const buffers: ArrayBuffer[] = [];
     for (const chunk of chunks) {
       const buf = await generateSpeechInworld(chunk, voiceId);
       buffers.push(buf);
     }
-    // Concatenate all buffers
-    const totalLength = buffers.reduce((acc, buf) => acc + buf.byteLength, 0);
-    const combined = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const buf of buffers) {
-      combined.set(new Uint8Array(buf), offset);
-      offset += buf.byteLength;
-    }
-    return combined.buffer;
+    const assembled = await assembleMp3Chunks(buffers);
+    return Uint8Array.from(assembled.buffer).buffer;
   }
 
   const response = await fetch(INWORLD_API_URL, {

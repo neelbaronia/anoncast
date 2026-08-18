@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSpeech, resolveElevenLabsVoiceId } from '@/lib/elevenlabs';
-import { uploadToR2Edge } from '@/lib/storage-edge';
+import { assembleMp3Chunks } from '@/lib/audio/mp3';
+import { finalAudioPersistenceFields } from '@/lib/audio/persistence';
+import { uploadToR2 } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 
 function synthesize(text: string, voiceId: string, provider?: string): Promise<ArrayBuffer> {
@@ -10,7 +12,8 @@ function synthesize(text: string, voiceId: string, provider?: string): Promise<A
   return generateSpeech(text, resolvedVoiceId);
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 // The current ElevenLabs subscription permits two concurrent requests.
 // Keep each batch at that ceiling and synthesize the outro separately.
@@ -78,8 +81,9 @@ export async function POST(request: NextRequest) {
             emitProgress(controller, completedUnits, totalUnits, 'segments');
           }
 
-          // 3. Generate the outro after the body batches, then combine all
-          // segments (pauses are handled by "..." in segment text).
+          // 3. Generate the outro after the body batches. Each ElevenLabs
+          // response is an independently encoded MP3, so decode and normalize
+          // every chunk before performing one final MP3 encode.
           const outroBuffer = await synthesize(outroText, lastSegment.voiceId, lastSegment.provider)
             .catch(() => new ArrayBuffer(0));
           completedUnits += 1;
@@ -87,70 +91,47 @@ export async function POST(request: NextRequest) {
 
           emitProgress(controller, totalUnits, totalUnits, 'combining');
           const audioBuffers = [...bodyBuffers, outroBuffer].filter(b => b.byteLength > 0);
-          const totalLength = audioBuffers.reduce((acc, buf) => acc + buf.byteLength, 0);
-          const combinedBuffer = new Uint8Array(totalLength);
-          let offset = 0;
-          for (const buf of audioBuffers) {
-            combinedBuffer.set(new Uint8Array(buf), offset);
-            offset += buf.byteLength;
-          }
+          const finalAudio = await assembleMp3Chunks(audioBuffers);
 
-          // 4. Upload to R2
+          // 4. Upload only after the final artifact has been encoded, probed,
+          // and fully decoded once without structural MP3 warnings.
           emitProgress(controller, totalUnits, totalUnits, 'uploading');
-          let audioUrl = '';
+          const fileName = `${crypto.randomUUID()}.mp3`;
+          const audioUrl = await uploadToR2(finalAudio.buffer, fileName);
           let r2ImageUrl = metadata?.image || null;
           const GLOBAL_SHOW_ID = '00000000-0000-0000-0000-000000000000';
 
-          let persistWarning = '';
-          try {
-            const fileName = `${crypto.randomUUID()}.mp3`;
-            audioUrl = await uploadToR2Edge(combinedBuffer, fileName);
-          } catch (r2Error) {
-            console.error('R2 upload failed:', r2Error);
-            persistWarning = `Audio upload to storage failed: ${r2Error instanceof Error ? r2Error.message : String(r2Error)}`;
-          }
-
-          if (audioUrl) {
-            // Upload image to R2
-            if (metadata?.image) {
-              try {
-                const imageResponse = await fetch(metadata.image);
-                if (imageResponse.ok) {
-                  const imageBuffer = await imageResponse.arrayBuffer();
-                  const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
-                  const imageExt = contentType.split('/')[1] || 'jpg';
-                  const imageFileName = `${crypto.randomUUID()}.${imageExt}`;
-                  r2ImageUrl = await uploadToR2Edge(new Uint8Array(imageBuffer), imageFileName, contentType);
-                }
-              } catch {}
-            }
-
-            // Save to Supabase
+          // Upload image to R2. An image failure does not affect the already
+          // validated audio and the original image URL remains as the fallback.
+          if (metadata?.image) {
             try {
-              const { error: dbError } = await supabase.from('episodes').insert({
-                show_id: GLOBAL_SHOW_ID,
-                title: metadata?.title || 'Untitled Episode',
-                description: `Original blog: ${metadata?.url || 'Unknown source'}\n\n${metadata?.firstSentence || ''}\n\nConvert your blog to audio at https://www.anoncast.net/ , or browse generated episodes at https://www.anoncast.net/generated`,
-                audio_url: audioUrl,
-                image_url: r2ImageUrl,
-                duration: Math.round(combinedBuffer.byteLength / 16000),
-                file_size: combinedBuffer.byteLength,
-                source_url: metadata?.url || null,
-                voice_id: validSegments[0]?.voiceId || null
-              });
-              if (dbError) {
-                console.error('Supabase insert failed:', dbError);
-                persistWarning = `Episode saved to storage but database record failed: ${dbError.message}`;
+              const imageResponse = await fetch(metadata.image);
+              if (imageResponse.ok) {
+                const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+                const contentType = imageResponse.headers.get('content-type') || 'image/jpeg';
+                const imageExt = contentType.split('/')[1] || 'jpg';
+                const imageFileName = `${crypto.randomUUID()}.${imageExt}`;
+                r2ImageUrl = await uploadToR2(imageBuffer, imageFileName, contentType);
               }
-            } catch (dbError) {
-              console.error('Supabase insert exception:', dbError);
-              persistWarning = 'Episode saved to storage but database record failed.';
+            } catch (imageError) {
+              console.warn('Image upload failed; retaining original URL:', imageError);
             }
           }
 
-          if (persistWarning) {
-            const warningLine = JSON.stringify({ type: 'warning', message: persistWarning }) + '\n';
-            controller.enqueue(new TextEncoder().encode(warningLine));
+          // The database row is the publication boundary: RSS cannot expose an
+          // episode until the validated asset upload and this insert succeed.
+          const { error: dbError } = await supabase.from('episodes').insert({
+            show_id: GLOBAL_SHOW_ID,
+            title: metadata?.title || 'Untitled Episode',
+            description: `Original blog: ${metadata?.url || 'Unknown source'}\n\n${metadata?.firstSentence || ''}\n\nConvert your blog to audio at https://www.anoncast.net/ , or browse generated episodes at https://www.anoncast.net/generated`,
+            audio_url: audioUrl,
+            image_url: r2ImageUrl,
+            ...finalAudioPersistenceFields(finalAudio),
+            source_url: metadata?.url || null,
+            voice_id: validSegments[0]?.voiceId || null
+          });
+          if (dbError) {
+            throw new Error(`Episode database insert failed after audio upload: ${dbError.message}`);
           }
 
           const completeLine = JSON.stringify({
