@@ -12,10 +12,10 @@ const LEGACY_VOICE_MAP: Record<string, string> = {
   ashley: 'XrExE9yKIg1WjnnlVkGX',
   charon: 'CwhRBWXzGAHq8TQ4Fs17',
   clive: 'CwhRBWXzGAHq8TQ4Fs17',
-  dennis: 'CwhRBWXzGAHq8TQ4Fs17',
+  dennis: 'CwhRBWXzGAHq8TQ4Fs17', // Roger
   ethan: 'TX3LPaxmHKxFdv7VOQHJ',
-  hades: 'CwhRBWXzGAHq8TQ4Fs17',
-  james: 'CwhRBWXzGAHq8TQ4Fs17',
+  hades: 'TX3LPaxmHKxFdv7VOQHJ', // Liam
+  james: 'cjVigY5qzO86Huf0OWal', // Eric
   kore: 'XrExE9yKIg1WjnnlVkGX',
   luna: 'cgSgspJ2msm6clMCkdW9',
   oliver: 'cjVigY5qzO86Huf0OWal',
