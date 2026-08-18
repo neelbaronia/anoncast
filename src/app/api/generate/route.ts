@@ -4,6 +4,7 @@ import { assembleMp3Chunks } from '@/lib/audio/mp3';
 import { finalAudioPersistenceFields } from '@/lib/audio/persistence';
 import { uploadToR2 } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
+import { coalesceTtsSegments } from '@/lib/tts-segments';
 
 function synthesize(text: string, voiceId: string, provider?: string): Promise<ArrayBuffer> {
   const resolvedVoiceId = provider === 'elevenlabs'
@@ -35,7 +36,7 @@ function emitProgress(controller: ReadableStreamDefaultController, done: number,
 
 export async function POST(request: NextRequest) {
   try {
-    const { segments, metadata } = await request.json();
+    const { segments, metadata, pendingGenerationId } = await request.json();
 
     if (!segments || !Array.isArray(segments) || segments.length === 0) {
       return NextResponse.json(
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validSegments = segments.filter((s: { voiceId?: string; confirmed?: boolean }) => s.voiceId && s.confirmed);
+    const validSegments = coalesceTtsSegments(segments);
 
     if (validSegments.length === 0) {
       return NextResponse.json(
@@ -132,6 +133,19 @@ export async function POST(request: NextRequest) {
           });
           if (dbError) {
             throw new Error(`Episode database insert failed after audio upload: ${dbError.message}`);
+          }
+
+          // A paid generation remains retryable until its validated episode has
+          // crossed the publication boundary above.
+          if (typeof pendingGenerationId === 'string' && pendingGenerationId) {
+            const { error: consumeError } = await supabase
+              .from('pending_generations')
+              .update({ consumed: true })
+              .eq('id', pendingGenerationId)
+              .eq('consumed', false);
+            if (consumeError) {
+              console.error('Pending generation completion update failed:', consumeError);
+            }
           }
 
           const completeLine = JSON.stringify({

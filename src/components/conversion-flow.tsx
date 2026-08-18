@@ -196,6 +196,7 @@ export function ConversionFlow() {
           let segments = null;
           let imageIndex = 0;
           let preview = null;
+          let pendingGenerationId: string | undefined;
 
           // Attempt server-side restore using Stripe session ID
           if (sessionId) {
@@ -204,6 +205,7 @@ export function ConversionFlow() {
               if (res.ok) {
                 const data = await res.json();
                 segments = data.segments;
+                pendingGenerationId = data.pendingGenerationId;
                 imageIndex = data.selectedImageIndex ?? 0;
                 if (data.metadata) {
                   preview = data.metadata;
@@ -239,7 +241,7 @@ export function ConversionFlow() {
             }
             setCurrentStep('generate');
             setTimeout(() => {
-              handleGenerate(segments);
+              handleGenerate(segments, pendingGenerationId);
             }, 500);
           }
         };
@@ -761,7 +763,10 @@ export function ConversionFlow() {
     localStorage.removeItem('last_paragraphs');
   };
 
-  const handleGenerate = async (segmentsToUse = textSegments) => {
+  const handleGenerate = async (
+    segmentsToUse = textSegments,
+    pendingGenerationId?: string,
+  ) => {
     setIsGenerating(true);
     setIsPlaying(false);
     setGenerationProgress(0);
@@ -807,6 +812,7 @@ export function ConversionFlow() {
           },
           body: JSON.stringify({ 
             segments: segmentsToUse,
+            pendingGenerationId,
             metadata: {
               title: previewData?.title || localStorage.getItem('last_title'),
               author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',

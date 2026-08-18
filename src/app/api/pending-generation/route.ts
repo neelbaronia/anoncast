@@ -62,13 +62,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Mark as consumed to prevent replay
-    await supabase
-      .from('pending_generations')
-      .update({ consumed: true })
-      .eq('id', data.id);
-
     return NextResponse.json({
+      pendingGenerationId: data.id,
       segments: data.segments,
       metadata: data.metadata,
       selectedImageIndex: data.selected_image_index,
