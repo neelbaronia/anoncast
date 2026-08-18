@@ -79,6 +79,15 @@ interface ScrapedContent {
   url: string;
 }
 
+interface AppliedPromo {
+  percentOff: number | null;
+  amountOff: number | null;
+  currency: string | null;
+  calculatedAmount: number | null;
+  discountedAmount: number | null;
+  waivePayment: boolean;
+}
+
 const steps = [
   { id: "input" as Step, label: "Paste Link", icon: Link },
   { id: "review" as Step, label: "Review", icon: FileText },
@@ -128,7 +137,7 @@ export function ConversionFlow() {
   const [activeVoice, setActiveVoice] = useState<string>("");
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [promoCode, setPromoCode] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
   const [promoError, setPromoError] = useState('');
   const isSplittingRef = useRef(false); // Track when we're splitting to prevent onBlur interference
   const [scrapeError, setScrapeError] = useState<string | null>(null);
@@ -156,6 +165,8 @@ export function ConversionFlow() {
   const totalWordCount = textSegments.reduce((acc, s) => acc + s.text.split(/\s+/).filter(w => w.length > 0).length, 0);
   const audioLengthMins = Math.ceil(totalWordCount / 150);
   const readTimeMins = Math.ceil(totalWordCount / 200);
+  const generationCost = audioLengthMins * PRICE_PER_MINUTE;
+  const displayedGenerationCost = appliedPromo?.discountedAmount ?? generationCost;
 
   // Rotate through progress messages while scraping
   useEffect(() => {
@@ -492,7 +503,7 @@ export function ConversionFlow() {
   };
 
   const handlePayment = async () => {
-    if (DEMO_MODE || promoApplied) {
+    if (DEMO_MODE || appliedPromo?.waivePayment) {
       setPaymentProcessing(true);
       setTimeout(() => {
         setPaymentProcessing(false);
@@ -528,11 +539,12 @@ export function ConversionFlow() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: audioLengthMins * PRICE_PER_MINUTE,
+          amount: generationCost,
           title: previewData?.title,
           segments: textSegments,
           metadata: generationMetadata,
           selectedImageIndex,
+          promoCode: appliedPromo ? promoCode.trim() : undefined,
         }),
       });
       
@@ -1970,7 +1982,7 @@ export function ConversionFlow() {
                       <div className="p-3 bg-gray-50 rounded-lg text-left">
                         <div className="text-xs text-gray-500 mb-0.5">Total cost</div>
                         <div className="text-xl font-semibold text-gray-900">
-                          ${(audioLengthMins * PRICE_PER_MINUTE).toFixed(2)}
+                          ${displayedGenerationCost.toFixed(2)}
                         </div>
                       </div>
                       <div className="flex flex-col items-center">
@@ -1985,7 +1997,7 @@ export function ConversionFlow() {
                           ) : (
                             <CreditCard className="w-4 h-4 mr-2" />
                           )}
-                          {paymentProcessing ? "Processing..." : promoApplied ? "Generate (Free)" : "Pay & Generate"}
+                          {paymentProcessing ? "Processing..." : appliedPromo?.waivePayment ? "Generate (Free)" : "Pay & Generate"}
                         </Button>
                         {(isTestMode || (typeof window !== 'undefined' && localStorage.getItem('is_test_mode') === 'true')) && (
                           <div className="mt-1.5 text-[9px] font-bold text-amber-600 tracking-wider uppercase">
@@ -2017,10 +2029,17 @@ export function ConversionFlow() {
                         onChange={(e) => { setPromoCode(e.target.value); setPromoError(''); }}
                         placeholder="Promo code"
                         className="h-8 w-36 px-3 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-gray-300"
-                        disabled={promoApplied}
+                        disabled={Boolean(appliedPromo)}
                       />
-                      {promoApplied ? (
-                        <span className="text-xs text-green-600 font-medium">Applied!</span>
+                      {appliedPromo ? (
+                        <span className="text-xs text-green-600 font-medium">
+                          {appliedPromo.percentOff != null
+                            ? `${appliedPromo.percentOff}% off`
+                            : appliedPromo.amountOff != null
+                              ? `$${(appliedPromo.amountOff / 100).toFixed(2)} off`
+                              : 'Applied'}
+                          {appliedPromo.waivePayment ? ' · Free' : ' · Applied'}
+                        </span>
                       ) : (
                         <button
                           onClick={async () => {
@@ -2029,11 +2048,18 @@ export function ConversionFlow() {
                               const res = await fetch('/api/promo', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ code: promoCode }),
+                                body: JSON.stringify({ code: promoCode, amount: generationCost }),
                               });
-                              const { valid } = await res.json();
-                              if (valid) {
-                                setPromoApplied(true);
+                              const data = await res.json();
+                              if (data.valid) {
+                                setAppliedPromo({
+                                  percentOff: data.discount?.percentOff ?? null,
+                                  amountOff: data.discount?.amountOff ?? null,
+                                  currency: data.discount?.currency ?? null,
+                                  calculatedAmount: data.calculatedAmount ?? null,
+                                  discountedAmount: data.discountedAmount ?? null,
+                                  waivePayment: Boolean(data.waivePayment),
+                                });
                                 setPromoError('');
                               } else {
                                 setPromoError('Invalid code');

@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { supabase } from '@/lib/supabase';
+import {
+  calculateDiscountedAmount,
+  getStripeClient,
+  isStripeTestMode,
+  resolveDiscountCode,
+  shouldWaiveDiscountedPayment,
+} from '@/lib/stripe-discounts';
 
-// Use sandbox keys if available in development, otherwise prefer production keys
-const stripeSecretKey = process.env.NODE_ENV === 'development'
-  ? (process.env.SANDBOX_STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY)
-  : (process.env.STRIPE_SECRET_KEY || process.env.SANDBOX_STRIPE_SECRET_KEY);
-const stripe = new Stripe(stripeSecretKey!);
-
-const isTestMode = stripeSecretKey?.startsWith('sk_test_');
+const stripe = getStripeClient();
+const isTestMode = isStripeTestMode();
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, title, type, episodeId, segments, metadata, selectedImageIndex } = await request.json();
+    const { amount, title, type, episodeId, segments, metadata, selectedImageIndex, promoCode } = await request.json();
 
     if (!amount || isNaN(amount)) {
       return NextResponse.json(
@@ -20,6 +21,30 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const discount = typeof promoCode === 'string' && promoCode.trim()
+      ? await resolveDiscountCode(promoCode)
+      : null;
+
+    if (promoCode && !discount) {
+      return NextResponse.json({ error: 'Invalid promo code' }, { status: 400 });
+    }
+
+    if (discount) {
+      const discountedAmount = calculateDiscountedAmount(Number(amount), discount);
+      if (shouldWaiveDiscountedPayment(discountedAmount, discount)) {
+        return NextResponse.json(
+          { error: 'This discount does not require a Stripe payment.' },
+          { status: 400 },
+        );
+      }
+    }
+
+    const stripeDiscount = discount
+      ? discount.source === 'promotion_code'
+        ? { promotion_code: discount.id }
+        : { coupon: discount.id }
+      : null;
 
     // Determine return paths
     const origin = request.nextUrl.origin;
@@ -42,12 +67,14 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
+      ...(stripeDiscount ? { discounts: [stripeDiscount] } : {}),
       mode: 'payment',
       success_url: `${baseSuccessUrl}?payment_success=true&type=${type || 'generation'}${episodeId ? `&episodeId=${episodeId}` : ''}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseCancelUrl}?payment_cancelled=true`,
       metadata: {
         type: type || 'generation',
         episodeId: episodeId || '',
+        promoCode: discount?.code || '',
       }
     });
 
