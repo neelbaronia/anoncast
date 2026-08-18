@@ -804,70 +804,89 @@ export function ConversionFlow() {
           throw new Error('No episodes found for demo mode');
         }
       } else {
-        const response = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-Stream-Progress': 'true',
-          },
-          body: JSON.stringify({ 
-            segments: segmentsToUse,
-            pendingGenerationId,
-            metadata: {
-              title: previewData?.title || localStorage.getItem('last_title'),
-              author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
-              image: selectedImageIndex >= 0 
-                ? (previewData?.images?.[selectedImageIndex] || previewData?.featuredImage || localStorage.getItem('last_image')) 
-                : 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg',
-              url: previewData?.url || localStorage.getItem('last_url'),
-              firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
-            }
-          }),
-        });
+        const metadata = {
+          title: previewData?.title || localStorage.getItem('last_title'),
+          author: previewData?.author || localStorage.getItem('last_author') || 'anoncast.net',
+          image: selectedImageIndex >= 0
+            ? (previewData?.images?.[selectedImageIndex] || previewData?.featuredImage || localStorage.getItem('last_image'))
+            : 'https://pub-9c1086c73aa54425928d7ac6861030dd.r2.dev/Anoncast.jpg',
+          url: previewData?.url || localStorage.getItem('last_url'),
+          firstSentence: previewData?.paragraphs?.[0] ? getFirstSentence(previewData.paragraphs[0]) : localStorage.getItem('last_first_sentence') || ''
+        };
+        let continuation: unknown;
+        let generationComplete = false;
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Failed to generate audio');
-        }
+        // Long articles checkpoint two TTS chunks per request. Continue until
+        // the server has assembled, validated, uploaded, and published the
+        // single final MP3.
+        while (!generationComplete) {
+          const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Stream-Progress': 'true',
+            },
+            body: JSON.stringify({
+              segments: segmentsToUse,
+              pendingGenerationId,
+              metadata,
+              continuation,
+            }),
+          });
 
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        if (!reader) throw new Error('No response body');
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to generate audio');
+          }
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const msg = JSON.parse(line);
-              if (msg.type === 'progress') {
-                setGenerationProgress(msg.percent);
-                setGenerationProgressDetail({ done: msg.done, total: msg.total });
-              } else if (msg.type === 'warning') {
-                console.warn('Generation warning:', msg.message);
-                alert(`Warning: ${msg.message}`);
-              } else if (msg.type === 'complete') {
-                // Convert direct R2 URL to proxied URL for CORS compatibility
-                const rawUrl = msg.audioUrl || '';
-                if (rawUrl.includes('r2.dev/')) {
-                  const filename = rawUrl.split('r2.dev/')[1];
-                  audioUrlToSet = `/api/audio/${filename}`;
-                } else {
-                  audioUrlToSet = rawUrl;
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let shouldContinue = false;
+          if (!reader) throw new Error('No response body');
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const msg = JSON.parse(line);
+                if (msg.type === 'progress') {
+                  setGenerationProgress(msg.percent);
+                  setGenerationProgressDetail({ done: msg.done, total: msg.total });
+                } else if (msg.type === 'continue') {
+                  continuation = msg.continuation;
+                  shouldContinue = true;
+                } else if (msg.type === 'warning') {
+                  console.warn('Generation warning:', msg.message);
+                  alert(`Warning: ${msg.message}`);
+                } else if (msg.type === 'complete') {
+                  // Convert direct R2 URL to proxied URL for CORS compatibility
+                  const rawUrl = msg.audioUrl || '';
+                  if (rawUrl.includes('r2.dev/')) {
+                    const filename = rawUrl.split('r2.dev/')[1];
+                    audioUrlToSet = `/api/audio/${filename}`;
+                  } else {
+                    audioUrlToSet = rawUrl;
+                  }
+                  newShowId = msg.showId;
+                  generationComplete = true;
+                } else if (msg.type === 'error') {
+                  throw new Error(msg.error);
                 }
-                newShowId = msg.showId;
-              } else if (msg.type === 'error') {
-                throw new Error(msg.error);
+              } catch (e) {
+                if (e instanceof SyntaxError) continue;
+                throw e;
               }
-            } catch (e) {
-              if (e instanceof SyntaxError) continue;
-              throw e;
             }
+          }
+
+          if (!generationComplete && !shouldContinue) {
+            throw new Error('Generation stopped before audio was completed. Please try again.');
           }
         }
       }

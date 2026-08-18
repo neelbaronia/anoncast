@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { metadataWithoutAudioGenerationState } from '@/lib/audio/generation-state';
 import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       pendingGenerationId: data.id,
       segments: data.segments,
-      metadata: data.metadata,
+      metadata: metadataWithoutAudioGenerationState(data.metadata),
       selectedImageIndex: data.selected_image_index,
     });
   } catch (error) {
